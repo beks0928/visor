@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Диктовка: микрофон при включённом усиленном режиме выполнения (hardened runtime). -->
+    <key>com.apple.security.device.audio-input</key>
+    <true/>
+    <!-- Плеер: Visor управляет Музыкой и Spotify и читает вкладки браузеров через AppleScript. -->
+    <key>com.apple.security.automation.apple-events</key>
+    <true/>
+    <!-- Планы: чтение и запись событий календаря. -->
+    <key>com.apple.security.personal-information.calendars</key>
+    <true/>
+    <!-- Хотспот: macOS показывает названия Wi-Fi сетей только программам с доступом к геопозиции. -->
+    <key>com.apple.security.personal-information.location</key>
+    <true/>
+</dict>
+</plist>

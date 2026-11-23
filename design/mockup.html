@@ -1,0 +1,650 @@
+<title>Visor — макет</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: экран MacBook сверху, остров по центру под вырезом, ниже цели для перетаскивания. Один тёмный мир, как у настоящего острова. */
+:root{
+  --desk:#101116;          /* рабочий стол */
+  --bar:#16171d;           /* строка меню */
+  --island:#000;           /* остров */
+  --panel:#0a0a0c;
+  --card:#15161b;
+  --card2:#1c1d24;
+  --line:#25262e;
+  --fg:#eceef3;
+  --mute:#8a8e9b;
+  --accent:#9aa8ff;        /* выбор и активная вкладка */
+  --work:#6fb1ff;
+  --wait:#ffb454;
+  --done:#5fd39a;
+  --err:#ff6b6b;
+  --display:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--desk);color:var(--fg);font-family:var(--display);font-size:14px;line-height:1.45;
+  padding-block:20px 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+input:focus-visible{outline:none;border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+h1{font-size:22px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px;text-wrap:balance}
+.lead{color:var(--mute);margin:0 0 16px;max-width:64ch}
+.demo{display:flex;flex-wrap:wrap;gap:8px 20px;margin-bottom:16px;align-items:center}
+.demo .grp{display:flex;align-items:center;gap:6px}
+.demo .lbl{color:var(--mute);font-size:12px;margin-right:2px}
+.chip{padding:5px 11px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:12.5px;color:var(--mute)}
+.chip.on{color:var(--fg);border-color:var(--accent);background:var(--card2)}
+.scroller{overflow-x:auto;padding-bottom:6px}
+.screen{min-width:760px;max-width:980px;margin:0 auto;background:linear-gradient(180deg,#1a1c25,#0e0f14 70%);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.menubar{height:28px;background:var(--bar);display:flex;align-items:center;justify-content:space-between;padding:0 14px;font-size:12px;color:var(--mute);font-family:var(--mono)}
+.stage{position:relative;min-height:470px;display:flex;justify-content:center;align-items:flex-start}
+.notch{position:absolute;top:-28px;left:50%;transform:translateX(-50%);width:160px;height:28px;background:var(--island);border-radius:0 0 12px 12px;z-index:3}
+#island{position:relative;z-index:2;margin-top:0;width:100%;display:flex;justify-content:center}
+/* collapsed */
+/* свёрнутый остров занимает строку выреза: слева метка, справа таймер, посередине сам вырез */
+.pill{display:flex;align-items:flex-start;height:36px;background:var(--island);border-radius:0 0 18px 18px;padding:0 16px 0 14px;margin-top:-28px;position:relative;z-index:4;justify-content:space-between}
+.pill .l,.pill .r{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--fg);flex:1;min-width:0;height:28px}
+.pill .r{justify-content:flex-end}
+.pill .gap{width:168px;flex:none}
+.pill{width:480px}
+.pbar{display:block;width:42px;height:3px;background:var(--line);border-radius:2px;overflow:hidden}
+.pbar b{display:block;height:100%;background:var(--accent)}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--mute);flex:none}
+.dot.work{background:var(--work)}.dot.wait{background:var(--wait)}.dot.done{background:var(--done)}.dot.err{background:var(--err)}
+.dot.work,.dot.wait{animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.4}}
+/* метки агента */
+.stc{display:inline-flex;align-items:center;gap:7px}
+.tag{font-family:var(--mono);font-size:12px;font-weight:500}
+/* кольцо агента «Глаз»: точка смотрит на курсор, при наведении на остров возвращается в центр с пружинкой и от кольца расходится круг */
+.ringm{position:relative;width:20px;height:20px;border-radius:50%;border:2px solid var(--mute);flex:none}
+.ringm .dot{position:absolute;left:50%;top:50%;width:8px;height:8px;margin:-4px 0 0 -4px;transform:translate(var(--ex,0px),var(--ey,0px));transition:transform .08s linear}
+.pill:hover .ringm .dot{transform:none;transition:transform .55s cubic-bezier(.34,1.8,.64,1)}
+.ringm::after{content:"";position:absolute;inset:-2px;border-radius:50%;border:1px solid var(--agent-c,var(--mute));opacity:0}
+.pill:hover .ringm::after{animation:rip .7s ease-out}
+@keyframes rip{from{opacity:.8;transform:scale(1)}to{opacity:0;transform:scale(1.9)}}
+/* правая фишка: таблетки по очереди */
+.cap{display:inline-flex;align-items:center;gap:6px;height:24px;padding:0 10px 0 3px;border-radius:12px;background:var(--card);border:1px solid var(--line);font-size:12px;white-space:nowrap}
+.cap .dot{margin-left:5px}
+.cap.in{animation:capin .3s ease-out}
+@keyframes capin{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+.pg{display:flex;flex-direction:column;gap:3px;margin-left:8px}
+.pg i{width:4px;height:4px;border-radius:50%;background:#3a3b45}
+.pg i.on{background:var(--fg)}
+.shp{width:12px;height:12px}
+.shp.diamond{border-radius:0;clip-path:polygon(50% 0,100% 50%,50% 100%,0 50%)}
+.shp.triangle{border-radius:0;clip-path:polygon(50% 8%,100% 92%,0 92%)}
+@media (prefers-reduced-motion:reduce){.dot,.cap.in,.pill:hover .ringm::after{animation:none!important}}
+/* expanded */
+.panel{width:min(860px,calc(100% - 24px));background:var(--island);border-radius:0 0 26px 26px;padding:12px 14px 16px}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;gap:10px}
+.rail,.tools{display:flex;gap:2px;align-items:center}
+.ib{width:34px;height:34px;border-radius:10px;display:grid;place-items:center;color:var(--mute)}
+.ib:hover{background:var(--card);color:var(--fg)}
+.ib.on{background:var(--card2);color:var(--fg)}
+.ib svg{width:19px;height:19px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.body{height:330px;overflow:auto;padding:3px;margin:-3px}
+.h{display:flex;align-items:baseline;justify-content:space-between;margin:0 0 8px;gap:10px}
+.h b{font-size:15px;font-weight:650}
+.h span{color:var(--mute);font-size:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:12px}
+.grid2{display:grid;grid-template-columns:1.1fr 1fr;gap:10px}
+.col{display:flex;flex-direction:column;gap:10px;min-width:0}
+.row{display:flex;align-items:center;gap:10px}
+.sp{flex:1;min-width:0}
+.mut{color:var(--mute)}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+.sm{font-size:12px}
+.btn{padding:6px 12px;border-radius:10px;background:var(--card2);border:1px solid var(--line);font-size:12.5px}
+.btn:hover{border-color:var(--mute)}
+.btn.pri{background:var(--accent);color:#0b0c12;border-color:var(--accent);font-weight:600}
+.btn.bad{color:var(--err)}
+.seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:2px;gap:2px;flex-wrap:wrap}
+.seg button{padding:4px 11px;border-radius:8px;font-size:12.5px;color:var(--mute)}
+.seg button.on{background:var(--card2);color:var(--fg)}
+.tile{display:flex;align-items:center;gap:8px;padding:10px 12px;border-radius:14px;background:var(--card);border:1px solid var(--line);font-size:12.5px;text-align:left}
+.tile:hover{border-color:var(--mute)}
+.tiles{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.badge{font-size:11px;padding:2px 8px;border-radius:999px;background:var(--card2);color:var(--mute);border:1px solid var(--line)}
+.badge.work{color:var(--work)}.badge.wait{color:var(--wait)}.badge.done{color:var(--done)}.badge.err{color:var(--err)}
+.pbarw{height:6px;border-radius:3px;background:var(--line);overflow:hidden}
+.pbarw b{display:block;height:100%;background:var(--accent)}
+.sw{width:34px;height:20px;border-radius:999px;background:var(--line);position:relative;flex:none;transition:background .15s}
+.sw::after{content:"";position:absolute;top:2px;left:2px;width:16px;height:16px;border-radius:50%;background:var(--fg);transition:transform .15s}
+.sw.on{background:var(--accent)}.sw.on::after{transform:translateX(14px);background:#0b0c12}
+.list>*+*{margin-top:6px}
+.item{display:flex;align-items:center;gap:10px;padding:9px 11px;border-radius:12px;background:var(--card);border:1px solid var(--line)}
+.item .t{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.xb{width:24px;height:24px;border-radius:8px;display:grid;place-items:center;color:var(--mute);flex:none}
+.xb:hover{background:var(--card2);color:var(--fg)}
+.xb svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.xb.pin.on{color:var(--accent)}
+.xb.pin.on svg{fill:currentColor}
+input[type=text],input:not([type]){width:100%;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:9px 12px;color:var(--fg);font:inherit}
+input[type=range]{accent-color:var(--accent);width:100%}
+/* shelf */
+.shelf{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:8px}
+.sc{position:relative;border-radius:12px;border:1px solid var(--line);background:var(--card);padding:6px;cursor:grab;user-select:none}
+.sc.sel{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.sc .th{height:62px;border-radius:8px;display:flex;align-items:flex-end;padding:5px;font-family:var(--mono);font-size:10px;color:#fff}
+.sc .nm{font-size:11px;color:var(--mute);margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sc .xb{position:absolute;top:10px;right:10px;background:#000a;color:#fff;width:22px;height:22px}
+.selbar{display:flex;align-items:center;gap:8px;margin-bottom:8px;padding:7px 10px;border-radius:12px;background:var(--card2);border:1px solid var(--accent)}
+/* clipboard */
+.sw-c{width:28px;height:28px;border-radius:8px;border:1px solid var(--line);flex:none}
+.lab{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--mute);margin:10px 0 6px}
+.lab:first-child{margin-top:0}
+/* time */
+.ring{position:relative;width:132px;height:132px;flex:none}
+.ring svg{width:132px;height:132px;transform:rotate(-90deg)}
+.ring .c{position:absolute;inset:0;display:grid;place-items:center;font-family:var(--mono);font-size:26px}
+.cells{display:grid;grid-template-columns:repeat(24,1fr);gap:1px;position:relative}
+.cells i{height:10px;background:var(--line);border-radius:1px}
+.cells i.w{background:#3b4a8a}.cells i.s{background:#17181e}
+.cells i.now{outline:1px solid var(--fg);outline-offset:1px}
+/* month */
+.mg{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;text-align:center}
+.mg div{padding:5px 0;border-radius:8px;font-size:12px;position:relative}
+.mg .today{background:var(--accent);color:#0b0c12;font-weight:600}
+.mg .has::after{content:"";position:absolute;bottom:2px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--accent)}
+.mg .today.has::after{background:#0b0c12}
+.chk{width:18px;height:18px;border-radius:6px;border:1.5px solid var(--mute);flex:none;display:grid;place-items:center}
+.chk.on{background:var(--done);border-color:var(--done)}
+.chk svg{width:12px;height:12px;stroke:#04130b;stroke-width:3;fill:none}
+.done-t{color:var(--mute);text-decoration:line-through}
+/* targets */
+.targets{max-width:980px;margin:14px auto 0}
+.targets .lab{margin-top:0}
+.tg{display:flex;flex-wrap:wrap;gap:8px}
+.tg div{flex:1 1 130px;min-height:48px;display:grid;place-items:center;border:1.5px dashed var(--line);border-radius:12px;color:var(--mute);font-size:13px;text-align:center;padding:8px}
+.tg div.over{border-color:var(--accent);color:var(--fg);background:var(--card)}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--card2);border:1px solid var(--line);color:var(--fg);padding:8px 14px;border-radius:12px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .15s;z-index:20;max-width:90vw}
+#toast.on{opacity:1}
+.note{color:var(--mute);font-size:12px;margin-top:10px}
+.off{opacity:.55}
+.msg{padding:8px 11px;border-radius:12px;background:var(--card);border:1px solid var(--line);max-width:86%}
+.msg.me{align-self:flex-end;background:var(--card2)}
+</style>
+
+<main>
+  <h1>Visor — макет острова</h1>
+  <p class="lead">Нажимайте на вкладки, кликайте по карточкам на полке (Shift — выбрать несколько), переключайте состояние агента. Всё, что тут показано, нарисовано для примера: значения условные.</p>
+  <div class="demo">
+    <div class="grp"><span class="lbl">Остров</span><span class="seg" id="segOpen"></span></div>
+    <div class="grp"><span class="lbl">Состояние</span><span class="seg" id="segAgent"></span></div>
+    <div class="grp"><span class="lbl">Агент</span><span class="seg" id="segWho"></span></div>
+    <span id="segMark" hidden></span>
+  </div>
+  <p id="markNote" hidden></p>
+  <div class="scroller">
+    <div class="screen">
+      <div class="menubar"><span>Visor</span><span>Чт 30 окт  14:32</span></div>
+      <div class="stage"><div class="notch"></div><div id="island"></div></div>
+    </div>
+  </div>
+  <div class="targets">
+    <div class="lab">Куда можно перетащить с полки: проверьте на карточках (плитки обозначают любое приложение)</div>
+    <div class="tg" id="tg"></div>
+  </div>
+</main>
+<div id="toast" role="status"></div>
+
+<script>
+const $=s=>document.querySelector(s);
+const IC={
+ home:'<path d="M3 11l9-8 9 8v9a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/>',
+ chat:'<path d="M4 5h16v11H9l-5 4z"/>',
+ plus:'<path d="M12 5v14M5 12h14"/>',
+ gear:'<circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9L7 7M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/>',
+ snd:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M16.5 9a4.5 4.5 0 0 1 0 6"/>',
+ mute:'<path d="M4 9v6h4l5 4V5L8 9z"/><path d="M17 9l4 6M21 9l-4 6"/>',
+ x:'<path d="M6 6l12 12M18 6L6 18"/>',
+ pin:'<path d="M9 3h6l-1 6 3 3H7l3-3zM12 12v9"/>',
+ clock:'<circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/>',
+ list:'<path d="M9 6h11M9 12h11M9 18h11M4 6h.01M4 12h.01M4 18h.01"/>',
+ clip:'<rect x="6" y="4" width="12" height="17" rx="2"/><path d="M9 4h6v3H9z"/>',
+ tools:'<rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 12h.01M12 12h.01M16 12h.01M8 16h.01M12 16h4"/>',
+ tray:'<path d="M3 13l3-8h12l3 8v6H3z"/><path d="M3 13h5l1 3h6l1-3h5"/>',
+ dev:'<path d="M8 8l-4 4 4 4M16 8l4 4-4 4M14 5l-4 14"/>',
+ music:'<path d="M9 18V6l10-2v12"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="16" r="2"/>',
+ pipette:'<path d="M14 5l5 5M5 19l1-4 9-9 3 3-9 9z"/>',
+ up:'<path d="M12 4v12M7 9l5-5 5 5M5 20h14"/>'
+};
+const ic=n=>`<svg viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
+const TABS=[
+ {id:'home',l:'Агенты',i:'home'},{id:'chat',l:'Чат',i:'chat'},{id:'time',l:'Время',i:'clock'},
+ {id:'plans',l:'Планы',i:'list'},{id:'clip',l:'Буфер',i:'clip'},{id:'tools',l:'Инструменты',i:'tools'},
+ {id:'shelf',l:'Полка',i:'tray'},{id:'dev',l:'Dev',i:'dev'},{id:'media',l:'Медиа',i:'music'}
+];
+const S={
+ open:false,tab:'home',view:null,agent:'done',muted:false,vol:60,who:'claude',mark:'c',rot:0,rotT:Date.now(),hp:false,defCur:'KZT',toolText:'310$ в тенге',
+ enabled:Object.fromEntries(TABS.map(t=>[t.id,true])),
+ mods:{ports:false,github:false,vercel:false},
+ sel:new Set(),
+ shelf:[
+  {id:1,k:'img',n:'Снимок экрана 14.32.08',g:'linear-gradient(135deg,#27407a,#6d4aa6)'},
+  {id:2,k:'img',n:'Снимок экрана 14.31.40',g:'linear-gradient(135deg,#1f5e57,#3a8f6f)'},
+  {id:3,k:'img',n:'Снимок экрана 14.29.12',g:'linear-gradient(135deg,#7a3a2c,#c2813d)'},
+  {id:4,k:'img',n:'Снимок экрана 14.27.55',g:'linear-gradient(135deg,#2b2f4d,#4d6fb0)'},
+  {id:5,k:'pdf',n:'Расписание 9F.pdf',g:'linear-gradient(135deg,#5a2530,#a24456)'},
+  {id:6,k:'zip',n:'demo-site.zip',g:'linear-gradient(135deg,#3b3b44,#6a6a78)'}
+ ],
+ clips:[
+  {id:1,t:'text',v:'Алматы, Медеуский р-н, ул. Примерная 12',pin:true},
+  {id:2,t:'text',v:'+7 700 000 00 00',pin:true},
+  {id:3,t:'color',v:'#5B8CFF',pin:false},
+  {id:4,t:'text',v:'npm run dev -- --port 5173',pin:false},
+  {id:5,t:'link',v:'https://github.com/akalikbergenov/cyclop',pin:false},
+  {id:6,t:'text',v:'name@example.com',pin:true},
+  {id:7,t:'color',v:'#FFB454',pin:false}
+ ],
+ timeSub:'pomo',plansSub:'day',mediaSub:'player',chatModel:'Claude',setSub:'main',
+ cd:{total:25*60,left:18*60+42,end:Date.now()+(18*60+42)*1000,running:true,label:'Фокус'},
+ sw:{acc:0,start:0,running:false,laps:[]},
+ plans:{
+  day:[{t:'Репетитор, математика',m:'16:00 · 1 ч',d:false},{t:'Сдать домашку по химии',m:'до 21:00',d:true},{t:'Сделать правки в макете Visor',m:'',d:false}],
+  week:[['Пн','2 дела · робототехника 15:30'],['Вт','1 дело · репетитор'],['Ср','3 дела'],['Чт','Сегодня · 3 дела'],['Пт','1 дело · ГО и зал'],['Сб','Свободно'],['Вс','Подготовка к неделе']],
+  month:[3,5,9,12,15,18,22,26,30]
+ }
+};
+const agents={work:{s:'работает',t:'Редактирует Island.swift',x:'+24 −6'},wait:{s:'ждёт вас',t:'Просит разрешение',x:''},done:{s:'закончил',t:'Готово: изменено 3 файла',x:'1 мин 24 с'}};
+const pl=(n,a)=>{const m=n%100,d=n%10;return a[(m>10&&m<20)?2:d===1?0:(d>=2&&d<=4)?1:2]};
+const fmt=s=>{s=Math.max(0,Math.round(s));return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0')};
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+/* звук: синтез в браузере, без файлов */
+let AC=null;
+function tone(seq,type){
+  if(S.muted)return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    let t=AC.currentTime+.02;
+    seq.forEach(([f,d])=>{
+      const o=AC.createOscillator(),g=AC.createGain();
+      o.type=type||'sine';o.frequency.value=f;
+      const v=.18*(S.vol/100);
+      g.gain.setValueAtTime(0,t);g.gain.linearRampToValueAtTime(v,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);
+      o.connect(g).connect(AC.destination);o.start(t);o.stop(t+d+.02);t+=d*.7;
+    });
+  }catch(e){}
+}
+const SND={done:()=>tone([[659,.35],[880,.35],[1175,.55]]),wait:()=>tone([[784,.22],[784,.3]]),err:()=>tone([[247,.3],[185,.5]],'triangle')};
+function toast(m){const t=$('#toast');t.textContent=m;t.classList.add('on');clearTimeout(toast.h);toast.h=setTimeout(()=>t.classList.remove('on'),1800)}
+
+function spark(a,c){const mx=Math.max(...a),mn=Math.min(...a);const p=a.map((v,i)=>`${(i/(a.length-1)*100).toFixed(1)},${(26-(v-mn)/(mx-mn||1)*22).toFixed(1)}`).join(' ');
+  return `<svg viewBox="0 0 100 28" width="100%" height="28" preserveAspectRatio="none"><polyline points="${p}" fill="none" stroke="${c}" stroke-width="1.6" vector-effect="non-scaling-stroke"/></svg>`}
+
+function vHome(){
+  const a=agents[S.agent];
+  let box='';
+  if(S.agent==='wait')box=`<div class="card" style="border-color:var(--wait)"><div class="sm mut" style="margin-bottom:6px">Bash</div><div class="mono sm" style="margin-bottom:10px">npm run build</div><div class="row"><button class="btn bad" data-act="agentSet" data-id="work">Запретить</button><button class="btn pri" data-act="agentSet" data-id="work">Разрешить</button><button class="btn" data-act="agentSet" data-id="work">Всегда</button></div></div>`;
+  else box=`<div class="card"><div class="sm">${a.t}</div><div class="mono sm mut" style="margin-top:4px">${a.x||'Сессия: visor · main'}</div></div>`;
+  const q=['Не беспокоить','Открыть проект','Закрыть лишнее','Снимок области','Shortcut по имени','Заставка'];
+  return `<div class="grid2">
+   <div class="col">
+    <div class="card row" style="gap:14px">
+      <div class="dot ${S.agent}" style="width:44px;height:44px;border-radius:14px"></div>
+      <div class="sp"><div class="row" style="gap:8px"><b style="font-size:16px">${WHO[S.who].name}</b><span class="badge ${S.agent}">${a.s}</span></div>
+      <div class="sm mut" style="margin-top:2px"><span style="color:var(--done)">●</span> Хуки установлены</div>
+      <div class="sm" style="margin-top:6px;color:var(--accent)">Открыть терминал сессии</div></div>
+      <button class="xb" aria-label="Перейти к окну" data-act="toast" data-id="Открываю окно терминала">${ic('up')}</button>
+    </div>
+    ${box}
+    <div class="card">
+      <div class="row sm"><span class="sp">Лимит за 5 часов</span><span class="mono">42%</span></div><div class="pbarw" style="margin:4px 0 8px"><b style="width:42%"></b></div>
+      <div class="row sm"><span class="sp">Лимит за неделю</span><span class="mono">18%</span></div><div class="pbarw" style="margin-top:4px"><b style="width:18%"></b></div>
+    </div>
+    <div class="row sm mut"><span class="sp">Codex · хуки установлены</span><span>Gemini CLI · не подключён</span></div>
+   </div>
+   <div class="col">
+    <div class="tiles">${q.map(x=>`<button class="tile" data-act="toast" data-id="Запущено: ${x}">${x}</button>`).join('')}</div>
+    <div class="card"><div class="row"><b class="mono" style="font-size:22px">12°</b><span class="sp sm mut">Алматы · дождь после 17:00</span></div>
+      <div class="sm" style="margin-top:8px">Сегодня: 3 дела, ближайшее в 16:00</div></div>
+    <div class="note" style="margin:0">Плиток интеграций здесь нет: по умолчанию они выключены и включаются через «+».</div>
+   </div></div>`;
+}
+const MODELS=['Claude','Gemini','Grok','GPT','Локальная'];
+function vChat(){return `<div class="row" style="margin-bottom:8px;flex-wrap:wrap">${MODELS.map(m=>`<button class="chip ${S.chatModel===m?'on':''}" data-act="model" data-id="${m}">${m}</button>`).join('')}</div>
+ <div class="col" style="height:210px;overflow:auto"><div class="msg me">Объясни разницу между хуком Stop и Notification в Claude Code.</div>
+ <div class="msg">Stop срабатывает, когда агент закончил ответ. Notification приходит, когда агенту нужно ваше разрешение или он ждёт ввода. Для звука «закончил» нужен Stop, для «нужен ответ» Notification.</div></div>
+ <div class="row" style="margin-top:8px"><input id="chatIn" placeholder="Сообщение для ${S.chatModel}"><button class="btn pri" data-act="toast" data-id="Для чата нужен ключ API выбранной модели">Отправить</button></div>`}
+
+function swFmt(){const ms=S.sw.acc+(S.sw.running?Date.now()-S.sw.start:0);const s=ms/1000;return String(Math.floor(s/60)).padStart(2,'0')+':'+String(Math.floor(s%60)).padStart(2,'0')+'.'+String(Math.floor(ms%1000/100))}
+function vTime(){
+  const subs=[['pomo','Pomodoro'],['timer','Таймер'],['sw','Секундомер'],['clocks','Часы']];
+  let c='';
+  if(S.timeSub==='pomo'||S.timeSub==='timer'){
+    const pre=S.timeSub==='pomo'?[['Фокус 25',25],['Перерыв 5',5],['Урок 40',40],['Длинный 15',15]]:[['1 мин',1],['5 мин',5],['10 мин',10],['30 мин',30]];
+    c=`<div class="row" style="gap:20px;flex-wrap:wrap"><div class="ring"><svg viewBox="0 0 132 132"><circle cx="66" cy="66" r="58" fill="none" stroke="var(--line)" stroke-width="8"/><circle id="ringC" cx="66" cy="66" r="58" fill="none" stroke="var(--accent)" stroke-width="8" stroke-linecap="round" stroke-dasharray="364.4" stroke-dashoffset="${364.4*(1-S.cd.left/S.cd.total)}"/></svg><div class="c" id="cdTxt">${fmt(S.cd.left)}</div></div>
+    <div class="sp col"><div class="sm mut">${esc(S.cd.label)}${S.timeSub==='pomo'?' · за 5 минут до конца остров мягко подсветится':''}</div>
+    <div class="row"><button class="btn pri" data-act="cdToggle">${S.cd.running?'Пауза':'Старт'}</button><button class="btn" data-act="cdReset">Сброс</button></div>
+    <div class="row" style="flex-wrap:wrap">${pre.map(([l,m])=>`<button class="chip" data-act="cdSet" data-id="${m}" data-l="${l}">${l}</button>`).join('')}</div></div></div>`;
+  }else if(S.timeSub==='sw'){
+    c=`<div class="row" style="gap:20px;flex-wrap:wrap"><div class="mono" id="swTxt" style="font-size:40px">${swFmt()}</div><div class="row"><button class="btn pri" data-act="swToggle">${S.sw.running?'Стоп':'Старт'}</button><button class="btn" data-act="swLap">Круг</button><button class="btn" data-act="swReset">Сброс</button></div></div>
+    <div class="list" style="margin-top:10px">${S.sw.laps.map((l,i)=>`<div class="item mono sm"><span class="mut">Круг ${S.sw.laps.length-i}</span><span class="sp"></span>${l}</div>`).join('')}</div>`;
+  }else{
+    const now=new Date(),H=(z)=>+new Intl.DateTimeFormat('en-GB',{timeZone:z,hour:'2-digit',hourCycle:'h23'}).format(now);
+    const base=H('Asia/Almaty');
+    const C=[['Алматы','Asia/Almaty'],['Лондон','Europe/London'],['Нью-Йорк','America/New_York'],['Токио','Asia/Tokyo']];
+    c=`<div class="list">${C.map(([n,z])=>{const off=(H(z)-base+24)%24;
+      const cells=Array.from({length:24},(_,i)=>{const l=(i+off)%24;return `<i class="${l>=9&&l<18?'w':(l>=22||l<7)?'s':''} ${i===base?'now':''}"></i>`}).join('');
+      return `<div class="item" style="flex-direction:column;align-items:stretch;gap:6px"><div class="row"><b class="sp">${n}</b><span class="mono">${new Intl.DateTimeFormat('ru',{timeZone:z,hour:'2-digit',minute:'2-digit'}).format(now)}</span></div><div class="cells">${cells}</div></div>`}).join('')}</div>
+      <div class="note">Шкала по часам Алматы: синий блок — рабочее время города, тёмный — сон. Рамка — сейчас.</div>`;
+  }
+  return `<div class="row" style="margin-bottom:10px"><span class="seg">${subs.map(([i,l])=>`<button class="${S.timeSub===i?'on':''}" data-act="timeSub" data-id="${i}">${l}</button>`).join('')}</span></div>${c}`;
+}
+
+function vPlans(){
+  const subs=[['day','Сегодня'],['week','Неделя'],['month','Месяц']];
+  let c='';
+  if(S.plansSub==='day')c=`<div class="list">${S.plans.day.map((p,i)=>`<div class="item"><button class="chk ${p.d?'on':''}" data-act="planChk" data-id="${i}" aria-label="Отметить">${p.d?'<svg viewBox="0 0 12 12"><path d="M2 6l3 3 5-6"/></svg>':''}</button><span class="t ${p.d?'done-t':''}">${esc(p.t)}</span><span class="sm mut">${esc(p.m)}</span></div>`).join('')}</div>
+   <div class="row" style="margin-top:8px"><input id="planIn" placeholder="завтра 16:00 репетитор 1ч — нажмите Enter"></div>
+   <div class="card row" style="margin-top:8px"><span class="sp sm">Ближайшая встреча: созвон по макету · через 42 мин</span><button class="btn pri" data-act="toast" data-id="Открываю ссылку на звонок">Подключиться</button></div>`;
+  else if(S.plansSub==='week')c=`<div class="list">${S.plans.week.map(([d,t])=>`<div class="item" ${d==='Чт'?'style="border-color:var(--accent)"':''}><b style="width:28px">${d}</b><span class="t">${t}</span></div>`).join('')}</div>`;
+  else c=`<div class="mg" style="margin-bottom:6px;color:var(--mute);font-size:11px">${['Пн','Вт','Ср','Чт','Пт','Сб','Вс'].map(d=>`<span>${d}</span>`).join('')}</div>
+   <div class="mg">${Array.from({length:31},(_,i)=>i+1).map(d=>`<div class="${d===30?'today':''} ${S.plans.month.includes(d)?'has':''}">${d}</div>`).join('')}</div>
+   <div class="note">Октябрь. Точка значит, что в этот день есть план.</div>`;
+  return `<div class="row" style="margin-bottom:10px"><span class="seg">${subs.map(([i,l])=>`<button class="${S.plansSub===i?'on':''}" data-act="plansSub" data-id="${i}">${l}</button>`).join('')}</span></div>${c}`;
+}
+
+function hexToRgb(h){const n=parseInt(h.slice(1),16);return `rgb(${n>>16}, ${n>>8&255}, ${n&255})`}
+function vClip(){
+  const row=c=>`<div class="item" data-act="copy" data-id="${c.id}" style="cursor:pointer">${c.t==='color'?`<span class="sw-c" style="background:${c.v}"></span>`:''}<span class="t ${c.t==='color'?'mono':''}">${esc(c.v)}${c.t==='color'?` <span class="mut sm">· ${hexToRgb(c.v)}</span>`:''}</span><button class="xb pin ${c.pin?'on':''}" data-act="pin" data-id="${c.id}" aria-label="${c.pin?'Открепить':'Закрепить'}">${ic('pin')}</button><button class="xb" data-act="clipDel" data-id="${c.id}" aria-label="Удалить">${ic('x')}</button></div>`;
+  const P=S.clips.filter(c=>c.pin),R=S.clips.filter(c=>!c.pin);
+  return `<div class="row" style="margin-bottom:8px"><span class="sm mut sp">Последние 40 копирований. Закреплённые не вытесняются и не удаляются сами.</span><button class="btn" data-act="pip">Пипетка</button></div>
+   ${P.length?`<div class="lab">Закреплено</div><div class="list">${P.map(row).join('')}</div>`:''}
+   <div class="lab">Недавние</div><div class="list">${R.map(row).join('')||'<div class="sm mut">Пока пусто</div>'}</div>
+   <div class="lab">Сниппеты</div><div class="row" style="flex-wrap:wrap"><button class="chip" data-act="toast" data-id="Скопировано: адрес">Адрес</button><button class="chip" data-act="toast" data-id="Скопировано: телефон">Телефон</button><button class="chip" data-act="toast" data-id="Скопировано: почта">Почта</button><button class="chip" data-act="toast" data-id="Новый сниппет">+ Добавить</button></div>`;
+}
+
+function calc(s){const t=s.replace(/,/g,'.').replace(/\s/g,'');
+  let m=t.match(/^([\d.]+)%от([\d.]+)$/i);if(m)return (m[1]*m[2]/100).toLocaleString('ru');
+  if(/^[0-9a-fx+\-*/().%^]+$/i.test(t)&&/[+\-*/^%]/.test(t)){try{const r=Function('"use strict";return ('+t.replace(/\^/g,'**')+')')();if(isFinite(r))return Number(r.toFixed(6)).toLocaleString('ru')}catch(e){}}
+  return null}
+/* курсы: снимок open.er-api.com на 31.10.2026 (1 USD = N). В приложении курс обновляется раз в час */
+const RATES={USD:1,EUR:0.8956,KZT:453.3469,RUB:80.4089,GBP:0.7471,CNY:6.6696,JPY:157.4944,TRY:49.9539,KRW:1334.5069,AED:3.6725,UAH:45.4013,CHF:0.8245,INR:95.0736,PLN:3.9411,UZS:11994.6415,CAD:1.3966,AUD:1.4223,GEL:2.5963};
+const RATE_DATE='31.10.2026';
+const SYM={USD:'$',EUR:'€',KZT:'₸',RUB:'₽',GBP:'£',TRY:'₺',UAH:'₴',INR:'₹',KRW:'₩'};
+/* слово с «!» на конце ищется только целиком, остальные по началу слова (доллар, долларов, долларах) */
+const ALIAS={
+ USD:['$','usd','доллар','долл','бакс','dollar'],EUR:['€','eur','евро','euro'],
+ KZT:['₸','kzt','тенге','тнг!','тг!','tenge'],RUB:['₽','rub','руб','ruble'],
+ GBP:['£','gbp','фунт','pound'],CNY:['cny','юан','yuan','rmb'],JPY:['¥','jpy','иен','йен','yen'],
+ TRY:['₺','try','лир'],KRW:['₩','krw','вон!'],AED:['aed','дирхам'],UAH:['₴','uah','грив'],
+ CHF:['chf','франк'],INR:['₹','inr','рупи'],PLN:['pln','злот'],UZS:['uzs','сум!'],
+ CAD:['cad'],AUD:['aud'],GEL:['gel','лари!']
+};
+function findCur(t){
+  const hits=[];
+  for(const [code,al] of Object.entries(ALIAS)){
+    let best=-1;
+    for(let a of al){
+      const full=a.endsWith('!');if(full)a=a.slice(0,-1);
+      let i=-1;
+      if(!/[a-zа-яё]/.test(a))i=t.indexOf(a);
+      else{
+        const strict=full||(/[a-z]/.test(a)&&a.length<5);
+        const m=new RegExp('(^|[^a-zа-яё])'+a+(strict?'(?![a-zа-яё])':'')).exec(t);
+        if(m)i=m.index+m[1].length;
+      }
+      if(i>=0&&(best<0||i<best))best=i;
+    }
+    if(best>=0)hits.push({code,i:best});
+  }
+  return hits.sort((x,y)=>x.i-y.i);
+}
+function parseNum(t){
+  const m=/(\d[\d\s]*(?:[.,]\d+)?)(?:\s*(k|к|тыс|млн|m|м)(?![a-zа-яё]))?/.exec(t);
+  if(!m)return NaN;
+  let s=m[1].replace(/\s/g,'');
+  if(/,\d{1,2}$/.test(s)&&!s.includes('.'))s=s.replace(',','.');
+  else if(/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(s))s=s.replace(/,/g,'');
+  else s=s.replace(',','.');
+  let n=parseFloat(s);const suf=m[2]||'';
+  if(suf==='k'||suf==='к'||suf==='тыс')n*=1e3;else if(suf)n*=1e6;
+  return n;
+}
+function conv(text){
+  const t=text.toLowerCase();
+  if(!/\d/.test(t))return null;
+  const hits=findCur(t);if(!hits.length)return null;
+  const n=parseNum(t);if(!isFinite(n))return null;
+  const other=c=>c===S.defCur?(c==='USD'?'KZT':'USD'):S.defCur;
+  const sepBefore=i=>{const b=t.slice(0,i).trimEnd();return /(?:^|\s)(?:в|во|на|to|in|into)$/.test(b)||/(->|→|=)$/.test(b)};
+  let src,tgt;
+  if(hits.length>=2){src=hits[0].code;tgt=hits[1].code}
+  else if(sepBefore(hits[0].i)){tgt=hits[0].code;src=S.defCur}
+  else{src=hits[0].code;tgt=other(src)}
+  if(src===tgt)tgt=other(src);
+  const rate=RATES[tgt]/RATES[src],out=n*rate;
+  const f=v=>new Intl.NumberFormat('ru-RU',{maximumFractionDigits:Math.abs(v)>=1000?0:Math.abs(v)>=1?2:4}).format(v);
+  const sy=c=>SYM[c]||c;
+  const more=['USD','EUR','KZT','RUB'].filter(c=>c!==src&&c!==tgt).slice(0,3);
+  return `<div style="font-size:22px">${f(n)} ${sy(src)} = <b>${f(out)} ${sy(tgt)}</b></div>
+   <div class="sm mut" style="margin-top:6px">Курс: 1 ${src} = ${rate<1?new Intl.NumberFormat('ru-RU',{maximumSignificantDigits:3}).format(rate):f(rate)} ${tgt} · на ${RATE_DATE}</div>
+   <div class="row sm" style="margin-top:8px;flex-wrap:wrap">${more.map(c=>`<span class="badge mono">${f(n*RATES[c]/RATES[src])} ${sy(c)}</span>`).join('')}</div>`;
+}
+function toolHTML(text){
+  const c=conv(text);if(c)return c;
+  const r=calc(text);if(r)return `<div style="font-size:22px">= <b>${r}</b></div>`;
+  return `<div class="sm mut">Напишите сумму и валюту, например 310$ в тенге, или выражение 12*(3+4)</div>`;
+}
+function vTools(){
+  const ex=['310$ в тенге','100 долларов','100 usd','5000 тг в евро','€50 to usd','2.5к фунтов в рубли','15% от 84 000','0xFF + 12'];
+  return `<input id="toolIn" placeholder="Сумма и валюта, выражение или процент" value="${esc(S.toolText)}"><div class="card" id="toolOut" style="margin:8px 0">${toolHTML(S.toolText)}</div>
+   <div class="row" style="flex-wrap:wrap;gap:6px"><span class="sm mut">Валюта по умолчанию</span>${['KZT','USD','RUB','EUR'].map(c=>`<button class="chip ${S.defCur===c?'on':''}" data-act="defCur" data-id="${c}">${c}</button>`).join('')}</div>
+   <div class="note" style="margin-top:6px">Пишите по-русски или по-английски, знаком или словом. Если валюту назначения не указать, сумма пересчитывается в валюту по умолчанию.</div>
+   <div class="lab">Попробуйте</div><div class="row" style="flex-wrap:wrap;gap:6px">${ex.map(x=>`<button class="chip" data-act="ex" data-id="${esc(x)}">${esc(x)}</button>`).join('')}</div>`}
+
+/* агенты и метки слева от выреза */
+const WHO={
+ claude:{name:'Claude Code',c:'#d98e6a',a:'C',b:'CC',shape:'circle',slot:1},
+ codex:{name:'Codex',c:'#7fd0c2',a:'X',b:'CX',shape:'diamond',slot:2},
+ gemini:{name:'Gemini CLI',c:'#8fb4ff',a:'G',b:'GM',shape:'triangle',slot:3}
+};
+const MARKS=[['a','A · Буква'],['b','B · Две буквы'],['c','C · Кольцо'],['d','D · Форма'],['e','E · Номер']];
+const MARKNOTE={
+ a:'A. Кружок состояния и одна буква агента: C, X, G. У своего агента это первая буква названия.',
+ b:'B. Кружок и код из двух букв: CC, CX, GM. Читается без догадок, занимает чуть больше места.',
+ c:'C. Без текста: цвет кольца показывает агента, заливка внутри показывает состояние.',
+ d:'D. Без текста: форма показывает агента (круг, ромб, треугольник), цвет показывает состояние. Новому агенту форма и цвет назначаются сами.',
+ e:'E. Кружок и номер сессии 1, 2, 3 по порядку запуска. Не говорит, какой это агент, но не путается, когда работают сразу несколько.'
+};
+function markHTML(){
+  const w=WHO[S.who],dot=`<span class="dot ${S.agent}"></span>`;
+  switch(S.mark){
+   case 'a':return `<span class="stc">${dot}<b class="tag">${w.a}</b></span>`;
+   case 'b':return `<span class="stc">${dot}<b class="tag">${w.b}</b></span>`;
+   case 'c':return `<span class="ringm" style="border-color:${w.c};--agent-c:${w.c}"><span class="dot ${S.agent}"></span></span>`;
+   case 'd':return `<span class="dot ${S.agent} shp ${w.shape}"></span>`;
+   default:return `<span class="stc">${dot}<b class="tag">${w.slot}<span class="mut">/3</span></b></span>`;
+  }
+}
+
+function vShelf(){
+  const n=S.shelf.length,k=S.sel.size;
+  return `<div class="h"><b>Полка</b><span>${n} ${pl(n,['файл','файла','файлов'])} · снимки экрана попадают сюда сами и не удаляются</span></div>
+  ${k?`<div class="selbar"><span class="sp sm">Выбрано ${k}. Перетащите любую выбранную карточку</span><button class="btn bad" data-act="delSel">Удалить выбранные</button><button class="btn" data-act="clearSel">Снять</button></div>`:`<div class="sm mut" style="margin-bottom:8px">Клик выбирает карточку, Shift+клик добавляет к выбору. Крестик на карточке удаляет её.</div>`}
+  <div class="shelf">${S.shelf.map(f=>`<div class="sc ${S.sel.has(f.id)?'sel':''}" draggable="true" data-act="sel" data-id="${f.id}" tabindex="0"><div class="th" style="background:${f.g}">${f.k==='img'?'PNG':f.k.toUpperCase()}</div><div class="nm">${esc(f.n)}</div><button class="xb" data-act="del" data-id="${f.id}" aria-label="Удалить">${ic('x')}</button></div>`).join('')}</div>
+  ${n?'':'<div class="card sm mut">Полка пуста. Перетащите файл на остров или сделайте снимок экрана.</div>'}`}
+
+function vDev(){
+  const off=t=>`<div class="item off sm"><span class="t">${t}</span><span class="mut">выключено · включить через «+»</span></div>`;
+  const ports=`<div class="list"><div class="item"><span class="mono">:3000</span><span class="t">next dev · visor-site</span><button class="btn" data-act="toast" data-id="Открываю localhost:3000">Открыть</button><button class="btn bad" data-act="toast" data-id="Порт 3000 остановлен">Стоп</button></div><div class="item"><span class="mono">:5173</span><span class="t">vite · demo-site</span><button class="btn" data-act="toast" data-id="Открываю localhost:5173">Открыть</button><button class="btn bad" data-act="toast" data-id="Порт 5173 остановлен">Стоп</button></div></div>`;
+  const gh=`<div class="list"><div class="item"><span class="dot done"></span><span class="t">visor #12 · проверки пройдены</span><span class="sm mut">готов к слиянию</span></div><div class="item"><span class="dot wait"></span><span class="t">demo-site #4 · идёт сборка</span><span class="sm mut">CI</span></div></div>`;
+  const vc=`<div class="list"><div class="item"><span class="dot done"></span><span class="t">visor-site · Production</span><span class="sm mut">2 мин назад</span></div></div>`;
+  return `<div class="grid2">
+   <div class="col"><div class="lab" style="margin:0">Система</div>
+    <div class="card"><div class="row sm"><span class="sp">Процессор</span><span class="mono">12%</span></div>${spark([8,12,9,22,14,11,40,18,12,10,12],'var(--work)')}
+     <div class="row sm" style="margin-top:6px"><span class="sp">Память</span><span class="mono">9,4 из 16 ГБ</span></div><div class="pbarw" style="margin-top:4px"><b style="width:59%"></b></div>
+     <div class="row sm" style="margin-top:8px"><span class="sp">Батарея</span><span class="mono">76% · ещё 5 ч 10 мин</span></div><div class="pbarw" style="margin-top:4px"><b style="width:76%;background:var(--done)"></b></div>
+     <div class="row sm" style="margin-top:8px"><span class="sp">Температура</span><span class="mono">41°</span></div></div>
+    <div class="lab" style="margin:0">Что греет Mac</div>
+    <div class="card sm mono"><div class="row"><span class="sp">node</span><span>8%</span></div><div class="row"><span class="sp">Safari</span><span>3%</span></div><div class="row"><span class="sp">Visor</span><span>0%</span></div></div>
+   </div>
+   <div class="col"><div class="lab" style="margin:0">Bluetooth</div>
+    <div class="card list">${[['AirPods Pro',82],['Magic Mouse',45],['Magic Keyboard',91]].map(([n,p])=>`<div><div class="row sm"><span class="sp">${n}</span><span class="mono">${p}%</span></div><div class="pbarw" style="margin-top:4px"><b style="width:${p}%;${p<50?'background:var(--wait)':''}"></b></div></div>`).join('')}</div>
+    ${S.mods.ports?`<div class="lab" style="margin:0">Порты</div>${ports}`:off('Порты')}
+    ${S.mods.github?`<div class="lab" style="margin:0">GitHub · PR и проверки</div>${gh}`:off('GitHub: PR и CI')}
+    ${S.mods.vercel?`<div class="lab" style="margin:0">Vercel</div>${vc}`:''}
+   </div></div>`}
+
+function vMedia(){
+  const subs=[['player','Плеер'],['tele','Телесуфлёр'],['notes','Заметки']];
+  let c='';
+  if(S.mediaSub==='player')c=`<div class="card row" style="gap:14px;flex-wrap:wrap"><div style="width:72px;height:72px;border-radius:12px;background:linear-gradient(135deg,#27407a,#9a6ad8);flex:none"></div><div class="sp"><b>Пример трека</b><div class="sm mut">Исполнитель · альбом</div><div class="pbarw" style="margin:10px 0 6px"><b style="width:38%"></b></div><div class="row sm mono mut"><span>1:21</span><span class="sp"></span><span>3:34</span></div></div><div class="row"><button class="btn" data-act="toast" data-id="Предыдущий">Назад</button><button class="btn pri" data-act="toast" data-id="Пауза">Пауза</button><button class="btn" data-act="toast" data-id="Следующий">Далее</button></div></div>`;
+  else if(S.mediaSub==='tele')c=`<div class="card" style="height:150px;overflow:hidden;font-size:20px;line-height:1.5;text-align:center"><div style="color:var(--mute)">Здравствуйте, меня зовут Алекс,</div><div>сегодня я расскажу про свой проект.</div><div style="color:var(--mute)">Он живёт прямо в вырезе экрана.</div></div><div class="row" style="margin-top:8px"><span class="sm mut">Скорость</span><input type="range" min="1" max="10" value="4" aria-label="Скорость"><button class="btn pri" data-act="toast" data-id="Текст пошёл">Запуск</button></div>`;
+  else c=`<div class="list"><div class="item"><span class="t">Идея: вкладка «Планы» с недельным видом</span><button class="xb" data-act="toast" data-id="Заметка удалена" aria-label="Удалить">${ic('x')}</button></div><div class="item"><span class="t">Проверить звук завершения в Codex</span><button class="xb" data-act="toast" data-id="Заметка удалена" aria-label="Удалить">${ic('x')}</button></div></div><div class="row" style="margin-top:8px"><input placeholder="Новая заметка"></div>`;
+  return `<div class="row" style="margin-bottom:10px"><span class="seg">${subs.map(([i,l])=>`<button class="${S.mediaSub===i?'on':''}" data-act="mediaSub" data-id="${i}">${l}</button>`).join('')}</span></div>${c}`}
+
+function vAdd(){
+  const tg=(a,i,l,on,sub)=>`<div class="item"><span class="t">${l}${sub?` <span class="mut sm">· ${sub}</span>`:''}</span><button class="sw ${on?'on':''}" data-act="${a}" data-id="${i}" role="switch" aria-checked="${on}" aria-label="${l}"></button></div>`;
+  return `<div class="grid2"><div><div class="lab">Вкладки</div><div class="list">${TABS.map(t=>tg('tabTog',t.id,t.l,S.enabled[t.id])).join('')}</div></div>
+   <div><div class="lab">Модули и интеграции (по умолчанию выключены)</div><div class="list">${tg('modTog','ports','Порты',S.mods.ports,'локальные серверы')}${tg('modTog','github','GitHub',S.mods.github,'PR и проверки CI')}${tg('modTog','vercel','Vercel',S.mods.vercel,'деплои')}
+   <div class="item off"><span class="t">Resend, n8n, Stripe, Notion, Cal.com</span><span class="sm mut">позже</span></div></div>
+   <div class="lab">Агенты</div><div class="list"><div class="item"><span class="t">Claude Code</span><span class="badge done">по умолчанию</span></div><div class="item"><span class="t">Codex</span><span class="badge done">подключён</span></div><div class="item"><span class="t">Gemini CLI, Cursor, OpenCode, свой</span><button class="btn" data-act="toast" data-id="Хуки установлены для выбранного агента">Подключить</button></div></div></div></div>`}
+
+function vSet(){
+  const sub=[['main','Основные'],['sound','Звук'],['agents','Агенты'],['voice','Диктовка']];
+  let c='';
+  const tg=(l,on,id,s)=>`<div class="item"><span class="t">${l}${s?` <span class="mut sm">· ${s}</span>`:''}</span><button class="sw ${on?'on':''}" data-act="setTog" data-id="${id}" role="switch" aria-checked="${on}" aria-label="${l}"></button></div>`;
+  if(S.setSub==='main')c=`<div class="list">${tg('Открывать по клику',true,'a')}${tg('Открывать при наведении',false,'b')}<div class="item"><span class="t">Закрывать через</span><span class="mono">8 с</span></div><div class="item"><span class="t">Экран</span><span class="seg"><button class="on">С вырезом</button><button>Основной</button><button>За мышью</button></span></div><div class="item"><span class="t">Язык</span><b>Русский</b></div>${tg('Горячая клавиша',true,'c','⌥ Пробел')}${tg('Запускать при входе в систему',true,'d')}</div>`;
+  else if(S.setSub==='sound')c=`<div class="list">${tg('Звуки включены',!S.muted,'mute')}<div class="item"><span class="t">Громкость</span><input type="range" id="vol" min="0" max="100" value="${S.vol}" style="max-width:220px" aria-label="Громкость"><span class="mono sm" id="volT">${S.vol}%</span></div>
+   <div class="item"><span class="t">Агент закончил работу</span><span class="sm mut">Колокольчик</span><button class="btn" data-act="play" data-id="done">Проверить</button></div>
+   <div class="item"><span class="t">Агенту нужен ответ</span><span class="sm mut">Два тона</span><button class="btn" data-act="play" data-id="wait">Проверить</button></div>
+   <div class="item"><span class="t">Ошибка</span><span class="sm mut">Низкий</span><button class="btn" data-act="play" data-id="err">Проверить</button></div>
+   ${tg('Не играть, если терминал в фокусе',true,'e')}${tg('Тихие часы',true,'f','08:00–15:00, уроки')}
+   <div class="item"><span class="t">Свои звуки: папка и «Обновить»</span><button class="btn" data-act="toast" data-id="Открываю папку со звуками">Открыть папку</button></div></div>`;
+  else if(S.setSub==='agents')c=`<div class="list"><div class="item"><span class="t">Claude Code</span><span class="sm mut">хуки установлены</span><span class="badge done">по умолчанию</span></div><div class="item"><span class="t">Codex</span><span class="sm mut">хуки установлены</span></div><div class="item"><span class="t">Gemini CLI</span><button class="btn" data-act="toast" data-id="Хуки установлены">Подключить</button></div>${tg('Отвечать на запросы прав из острова',true,'g')}${tg('Показывать лимиты Claude и Codex',true,'h','5 часов и неделя')}<div class="sm mut" style="margin-top:6px">Файл settings.json сначала копируется в бэкап, правки показываются и записываются только после вашего подтверждения.</div></div>`;
+  else c=`<div class="list">${tg('Диктовка голосом',true,'i')}<div class="item"><span class="t">Клавиша</span><span class="mono">Правый ⌥</span></div><div class="item"><span class="t">Язык</span><b>Русский</b></div><div class="item"><span class="t">Распознавание</span><span class="sm mut">на устройстве, без сети</span></div></div>`;
+  return `<div class="row" style="margin-bottom:10px"><span class="seg">${sub.map(([i,l])=>`<button class="${S.setSub===i?'on':''}" data-act="setSub" data-id="${i}">${l}</button>`).join('')}</span></div>${c}`}
+
+/* правая фишка: таблетки сменяют друг друга каждые 3 с, при наведении пауза */
+const ROT=[{t:'timer'},{t:'limit',txt:'42% · 5 ч',c:'#6fb1ff'},{t:'meet',txt:'16:00 встреча',c:'#5fd39a'}];
+function capHTML(i){
+  const w=ROT[i];
+  if(w.t==='timer'){const f=S.cd.left/S.cd.total,c=2*Math.PI*9;
+    return `<svg viewBox="0 0 22 22" width="22" height="22" aria-hidden="true"><circle cx="11" cy="11" r="9" fill="none" stroke="#25262e" stroke-width="2.2"/><circle cx="11" cy="11" r="9" fill="none" stroke="${S.cd.left<300?'#ffb454':'#9aa8ff'}" stroke-width="2.2" stroke-linecap="round" stroke-dasharray="${(c*f).toFixed(1)} ${c.toFixed(1)}" transform="rotate(-90 11 11)"/><text x="11" y="13.6" text-anchor="middle" font-size="7.5" font-family="JetBrains Mono,monospace" fill="#eceef3">${Math.ceil(S.cd.left/60)}</text></svg><span class="mono">${fmt(S.cd.left)}</span>`}
+  return `<span class="dot" style="background:${w.c}"></span><span class="mono">${w.txt}</span>`;
+}
+const pgHTML=i=>[0,1,2].map(k=>`<i class="${k===i?'on':''}"></i>`).join('');
+/* глаз: точка внутри кольца смотрит на курсор */
+document.addEventListener('pointermove',e=>{
+  const r=document.querySelector('.ringm');if(!r)return;
+  const b=r.getBoundingClientRect(),dx=e.clientX-(b.left+b.width/2),dy=e.clientY-(b.top+b.height/2),d=Math.hypot(dx,dy)||1,m=Math.min(3.2,d/14);
+  r.style.setProperty('--ex',(dx/d*m).toFixed(2)+'px');r.style.setProperty('--ey',(dy/d*m).toFixed(2)+'px');
+});
+document.addEventListener('pointerover',e=>{S.hp=!!(e.target.closest&&e.target.closest('.pill'))});
+const V={home:vHome,chat:vChat,time:vTime,plans:vPlans,clip:vClip,tools:vTools,shelf:vShelf,dev:vDev,media:vMedia};
+
+function render(){
+  const isl=$('#island');
+  if(!S.open){
+    const a=agents[S.agent];
+    isl.innerHTML=`<button class="pill" data-act="expand" title="${WHO[S.who].name}: ${a.s}" aria-label="Открыть Visor. ${WHO[S.who].name}: ${a.s}"><span class="l">${markHTML()}</span><span class="gap"></span><span class="r"><span class="cap" id="cap">${capHTML(S.rot)}</span><span class="pg" id="pg">${pgHTML(S.rot)}</span></span></button>`;
+  }else{
+    const rail=TABS.filter(t=>S.enabled[t.id]).map(t=>`<button class="ib ${!S.view&&S.tab===t.id?'on':''}" data-act="tab" data-id="${t.id}" title="${t.l}" aria-label="${t.l}">${ic(t.i)}</button>`).join('');
+    let body;
+    if(S.view==='add')body=vAdd();else if(S.view==='settings')body=vSet();else body=(V[S.tab]||vHome)();
+    isl.innerHTML=`<div class="panel"><div class="top"><div class="rail">${rail}<button class="ib ${S.view==='add'?'on':''}" data-act="add" title="Добавить вкладки и модули" aria-label="Добавить">${ic('plus')}</button></div>
+      <div class="tools"><button class="ib ${S.view==='settings'?'on':''}" data-act="settings" title="Настройки" aria-label="Настройки">${ic('gear')}</button><button class="ib" data-act="muteTog" title="Звук" aria-label="Звук">${ic(S.muted?'mute':'snd')}</button><button class="ib" data-act="collapse" title="Свернуть" aria-label="Свернуть">${ic('x')}</button></div></div>
+      <div class="body">${body}</div></div>`;
+  }
+  $('#segOpen').innerHTML=[['Свёрнуто',false],['Развёрнуто',true]].map(([l,v])=>`<button class="${S.open===v?'on':''}" data-act="${v?'expand':'collapse'}">${l}</button>`).join('');
+  $('#segAgent').innerHTML=Object.entries(agents).map(([k,v])=>`<button class="${S.agent===k?'on':''}" data-act="agentSet" data-id="${k}">${v.s}</button>`).join('');
+  $('#segWho').innerHTML=Object.entries(WHO).map(([k,v])=>`<button class="${S.who===k?'on':''}" data-act="who" data-id="${k}">${v.name}</button>`).join('');
+  $('#segMark').innerHTML=MARKS.map(([k,l])=>`<button class="${S.mark===k?'on':''}" data-act="mark" data-id="${k}">${l}</button>`).join('');
+  $('#markNote').textContent=MARKNOTE[S.mark];
+}
+
+$('#tg').innerHTML=['WhatsApp','Telegram','Почта','Finder','Любое окно'].map(n=>`<div data-t="${n}">${n}</div>`).join('');
+
+document.addEventListener('click',e=>{
+  const b=e.target.closest('[data-act]');if(!b)return;
+  const a=b.dataset.act,id=b.dataset.id;
+  /* вложенные кнопки (крестик, закрепить) не должны срабатывать как клик по карточке */
+  const inner=e.target.closest('.xb[data-act],.chk[data-act]');
+  if(inner&&inner!==b)return;
+  switch(a){
+   case 'expand':S.open=true;break;
+   case 'collapse':S.open=false;break;
+   case 'tab':S.tab=id;S.view=null;break;
+   case 'add':S.view=S.view==='add'?null:'add';break;
+   case 'settings':S.view=S.view==='settings'?null:'settings';break;
+   case 'muteTog':S.muted=!S.muted;toast(S.muted?'Звук выключен':'Звук включён');break;
+   case 'agentSet':{const prev=S.agent;S.agent=id;if(prev!==id){if(id==='done')SND.done();if(id==='wait')SND.wait();if(id==='err')SND.err()}break}
+   case 'toast':toast(id);return;
+   case 'tabTog':S.enabled[id]=!S.enabled[id];if(!S.enabled[S.tab])S.tab='home';break;
+   case 'modTog':S.mods[id]=!S.mods[id];break;
+   case 'setSub':S.setSub=id;break;
+   case 'setTog':if(id==='mute')S.muted=!S.muted;else{b.classList.toggle('on');b.setAttribute('aria-checked',b.classList.contains('on'));return}break;
+   case 'play':SND[id]();return;
+   case 'model':S.chatModel=id;break;
+   case 'timeSub':S.timeSub=id;break;
+   case 'plansSub':S.plansSub=id;break;
+   case 'mediaSub':S.mediaSub=id;break;
+   case 'planChk':S.plans.day[+id].d=!S.plans.day[+id].d;break;
+   case 'cdToggle':{const c=S.cd;if(c.running){c.left=Math.max(0,(c.end-Date.now())/1000);c.running=false}else{c.end=Date.now()+c.left*1000;c.running=true}break}
+   case 'cdReset':S.cd.left=S.cd.total;S.cd.running=false;break;
+   case 'cdSet':S.cd={total:id*60,left:id*60,end:0,running:false,label:b.dataset.l};break;
+   case 'swToggle':{const w=S.sw;if(w.running){w.acc+=Date.now()-w.start;w.running=false}else{w.start=Date.now();w.running=true}break}
+   case 'swLap':S.sw.laps.unshift(swFmt());break;
+   case 'swReset':S.sw={acc:0,start:0,running:false,laps:[]};break;
+   case 'copy':{const c=S.clips.find(x=>x.id==id);toast('Скопировано: '+c.v.slice(0,32));return}
+   case 'pin':{const c=S.clips.find(x=>x.id==id);c.pin=!c.pin;toast(c.pin?'Закреплено':'Откреплено');break}
+   case 'clipDel':S.clips=S.clips.filter(x=>x.id!=id);break;
+   case 'pip':S.clips.unshift({id:Date.now(),t:'color',v:'#'+Math.floor(Math.random()*0xffffff).toString(16).padStart(6,'0').toUpperCase(),pin:false});toast('Цвет сохранён в буфер');break;
+   case 'sel':{const n=+id;if(e.shiftKey){S.sel.has(n)?S.sel.delete(n):S.sel.add(n)}else{if(S.sel.size===1&&S.sel.has(n))S.sel.clear();else{S.sel.clear();S.sel.add(n)}}break}
+   case 'del':{const n=+id;S.shelf=S.shelf.filter(f=>f.id!==n);S.sel.delete(n);break}
+   case 'delSel':{const k=S.sel.size;S.shelf=S.shelf.filter(f=>!S.sel.has(f.id));S.sel.clear();toast('Удалено: '+k);break}
+   case 'clearSel':S.sel.clear();break;
+   case 'defCur':S.defCur=id;break;
+   case 'ex':S.toolText=id;break;
+   case 'who':S.who=id;break;
+   case 'mark':S.mark=id;break;
+  }
+  render();
+});
+document.addEventListener('input',e=>{
+  if(e.target.id==='toolIn'){S.toolText=e.target.value;$('#toolOut').innerHTML=toolHTML(S.toolText)}
+  if(e.target.id==='vol'){S.vol=+e.target.value;$('#volT').textContent=S.vol+'%'}
+});
+document.addEventListener('keydown',e=>{
+  if(e.target.id==='planIn'&&e.key==='Enter'&&e.target.value.trim()){S.plans.day.push({t:e.target.value.trim(),m:'добавлено',d:false});render();toast('Добавлено в план на сегодня')}
+});
+/* перетаскивание карточек: если карточка выбрана, уходит вся выборка */
+document.addEventListener('dragstart',e=>{
+  const c=e.target.closest&&e.target.closest('.sc');if(!c)return;
+  const id=+c.dataset.id;const ids=S.sel.has(id)?[...S.sel]:[id];
+  e.dataTransfer.setData('text/plain',JSON.stringify(ids));e.dataTransfer.effectAllowed='copy';
+});
+document.querySelectorAll('#tg div').forEach(d=>{
+  d.addEventListener('dragover',e=>{e.preventDefault();d.classList.add('over')});
+  d.addEventListener('dragleave',()=>d.classList.remove('over'));
+  d.addEventListener('drop',e=>{e.preventDefault();d.classList.remove('over');
+    let n=1;try{n=JSON.parse(e.dataTransfer.getData('text/plain')).length}catch(x){}
+    toast(`${d.dataset.t}: получено ${n} ${pl(n,['файл','файла','файлов'])}`)});
+});
+setInterval(()=>{
+  const c=S.cd;
+  if(c.running){
+    const left=Math.max(0,(c.end-Date.now())/1000);
+    if(left<=0){c.running=false;c.left=0;SND.done();toast('Время вышло');render();return}
+    const t=$('#cdTxt'),r=$('#ringC'),pt=$('#cT'),pb=$('#cB');
+    if(t)t.textContent=fmt(left);if(r)r.setAttribute('stroke-dashoffset',364.4*(1-left/c.total));
+    if(pt)pt.textContent=fmt(left);if(pb)pb.style.width=left/c.total*100+'%';
+    c.left=left;
+  }
+  const s=$('#swTxt');if(s&&S.sw.running)s.textContent=swFmt();
+  const cap=$('#cap');
+  if(cap){
+    if(S.hp)S.rotT+=250;
+    else if(Date.now()-S.rotT>=3000){S.rot=(S.rot+1)%3;S.rotT=Date.now();cap.classList.remove('in');void cap.offsetWidth;cap.classList.add('in');cap.innerHTML=capHTML(S.rot);$('#pg').innerHTML=pgHTML(S.rot)}
+    else if(S.rot===0)cap.innerHTML=capHTML(0);
+  }
+},250);
+render();
+</script>

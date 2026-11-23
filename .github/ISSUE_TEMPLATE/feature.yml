@@ -1,0 +1,33 @@
+name: Идея
+description: Что добавить или улучшить
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: Какую задачу это решает
+      description: Что вы делаете и что неудобно. Опишите ситуацию, а не готовое решение.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: Как вы это себе представляете
+  - type: dropdown
+    id: area
+    attributes:
+      label: Для какой части
+      options:
+        - Остров и таблетки
+        - Агенты (новый агент или модель)
+        - Плеер и Spotify
+        - Awake
+        - Планы и календарь
+        - Время
+        - Чат (новая модель)
+        - Другое
+  - type: input
+    id: agent
+    attributes:
+      label: Если это новый агент или модель
+      description: Название и ссылка на описание хуков или API.

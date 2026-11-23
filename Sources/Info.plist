@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>ru</string>
+	<key>CFBundleDisplayName</key>
+	<string>Visor</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleLocalizations</key>
+	<array>
+		<string>ru</string>
+		<string>en</string>
+	</array>
+	<key>CFBundleName</key>
+	<string>Visor</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(MARKETING_VERSION)</string>
+	<key>CFBundleVersion</key>
+	<string>$(CURRENT_PROJECT_VERSION)</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>15.0</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>NSAppleEventsUsageDescription</key>
+	<string>Visor показывает, что играет в Музыке и Spotify, и переключает треки.</string>
+	<key>NSCalendarsFullAccessUsageDescription</key>
+	<string>Visor показывает ближайшие встречи и добавляет события, которые вы вводите в строке на вкладке «Планы».</string>
+	<key>NSCalendarsUsageDescription</key>
+	<string>Visor показывает ближайшие встречи и добавляет события, которые вы вводите в строке на вкладке «Планы».</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>Visor</string>
+	<key>NSLocationAlwaysUsageDescription</key>
+	<string>Visor ищет сеть хотспота iPhone по названию, когда пропадает Wi-Fi. Где вы находитесь, Visor не читает.</string>
+	<key>NSLocationUsageDescription</key>
+	<string>Visor ищет сеть хотспота iPhone по названию, когда пропадает Wi-Fi. Где вы находитесь, Visor не читает.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Visor слушает микрофон только пока вы держите диктовку включённой, чтобы набрать текст голосом.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Visor превращает вашу речь в текст для диктовки в чате и заметках.</string>
+	<key>VisorRepository</key>
+	<string>beks0928/visor</string>
+</dict>
+</plist>

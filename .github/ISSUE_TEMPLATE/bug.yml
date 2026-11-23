@@ -1,0 +1,63 @@
+name: Ошибка
+description: Что-то в Visor работает не так
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Спасибо, что пишете. Чем точнее описание, тем быстрее получится починить.
+        Не вставляйте сюда ключи, пароли и токены: Visor их в журналы не пишет, но проверьте текст перед отправкой.
+  - type: input
+    id: version
+    attributes:
+      label: Версия Visor
+      description: «Настройки → Основные», внизу строка «Visor …».
+      placeholder: "Visor 0.1.0 (1)"
+    validations:
+      required: true
+  - type: input
+    id: macos
+    attributes:
+      label: macOS и Mac
+      description: «Об этом Mac». Есть ли у Mac вырез в экране?
+      placeholder: "macOS 15.2, MacBook Pro 14 (с вырезом)"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Где проблема
+      options:
+        - Остров, таблетка, меню по правому клику
+        - Агенты (Claude Code, Codex, Gemini CLI, Qwen Code)
+        - Плеер, текст песен, Spotify
+        - Awake (крышка, заморозка, хотспот, энергосбережение)
+        - Планы и календарь
+        - Время (таймер, секундомер, часы)
+        - Чат
+        - Буфер, полка, инструменты, Dev
+        - Установка и запуск
+        - Другое
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: Что не так
+      description: Что вы ожидали и что произошло. Скриншот или запись экрана очень помогают.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Как повторить
+      placeholder: |
+        1. Открыть вкладку …
+        2. Нажать …
+        3. Видно …
+  - type: textarea
+    id: log
+    attributes:
+      label: Журнал (если просили или проблема со Spotify)
+      description: Файл `~/Library/Application Support/Visor/spotify.log`, там код ответа и начало ответа сервера, без токенов. Просмотрите перед отправкой.
+      render: text

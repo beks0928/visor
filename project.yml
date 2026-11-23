@@ -1,0 +1,54 @@
+name: Visor
+options:
+  bundleIdPrefix: com.beksultan
+  deploymentTarget:
+    macOS: "15.0"
+  createIntermediateGroups: true
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    MARKETING_VERSION: "0.1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    MACOSX_DEPLOYMENT_TARGET: "15.0"
+targets:
+  Visor:
+    type: application
+    platform: macOS
+    sources:
+      - Sources
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleName: Visor
+        CFBundleDisplayName: Visor
+        CFBundleShortVersionString: "$(MARKETING_VERSION)"
+        CFBundleVersion: "$(CURRENT_PROJECT_VERSION)"
+        LSUIElement: true
+        LSMinimumSystemVersion: "15.0"
+        NSHumanReadableCopyright: "Visor"
+        # Репозиторий для кнопок отзыва и обновления: «имя/репозиторий». Меняется скриптом scripts/set-repo.sh.
+        VisorRepository: "beks0928/visor"
+        CFBundleDevelopmentRegion: ru
+        CFBundleLocalizations: [ru, en]
+        NSCalendarsFullAccessUsageDescription: "Visor показывает ближайшие встречи и добавляет события, которые вы вводите в строке на вкладке «Планы»."
+        NSCalendarsUsageDescription: "Visor показывает ближайшие встречи и добавляет события, которые вы вводите в строке на вкладке «Планы»."
+        NSMicrophoneUsageDescription: "Visor слушает микрофон только пока вы держите диктовку включённой, чтобы набрать текст голосом."
+        NSSpeechRecognitionUsageDescription: "Visor превращает вашу речь в текст для диктовки в чате и заметках."
+        NSLocationUsageDescription: "Visor ищет сеть хотспота iPhone по названию, когда пропадает Wi-Fi. Где вы находитесь, Visor не читает."
+        NSLocationAlwaysUsageDescription: "Visor ищет сеть хотспота iPhone по названию, когда пропадает Wi-Fi. Где вы находитесь, Visor не читает."
+        NSAppleEventsUsageDescription: "Visor показывает, что играет в Музыке и Spotify, и переключает треки."
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.beksultan.visor
+        PRODUCT_NAME: Visor
+        # Без своего сертификата подпись ad-hoc. Настоящая подпись и нотаризация: scripts/release.sh.
+        CODE_SIGN_STYLE: Manual
+        CODE_SIGN_IDENTITY: "-"
+        CODE_SIGN_ENTITLEMENTS: Visor.entitlements
+        ENABLE_HARDENED_RUNTIME: NO
+        ENABLE_APP_SANDBOX: NO
+        GENERATE_INFOPLIST_FILE: NO
+      configs:
+        # Для нотаризации нужен усиленный режим выполнения: права из Visor.entitlements тогда становятся обязательными.
+        Release:
+          ENABLE_HARDENED_RUNTIME: YES

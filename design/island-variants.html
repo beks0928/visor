@@ -1,0 +1,276 @@
+<title>Visor — кольцо и фишки</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Onest:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: три раздела по пять карточек. В каждой карточке чёрная полоса острова с вырезом посередине, слева кольцо агента, справа фишка. */
+:root{
+  --desk:#101116;
+  --bar:#16171d;
+  --card:#15161b;
+  --card2:#1c1d24;
+  --line:#25262e;
+  --fg:#eceef3;
+  --mute:#8a8e9b;
+  --accent:#9aa8ff;
+  --display:"Onest",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --mono:"JetBrains Mono",ui-monospace,Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--desk);color:var(--fg);font-family:var(--display);font-size:14px;line-height:1.45;
+  padding-block:20px 48px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+main{max-width:1040px;margin:0 auto}
+h1{font-size:22px;font-weight:700;letter-spacing:-.01em;margin:0 0 4px;text-wrap:balance}
+h2{font-size:17px;font-weight:650;margin:34px 0 4px;text-wrap:balance}
+.lead,.sub{color:var(--mute);margin:0 0 14px;max-width:70ch}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;padding:0}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,320px),1fr));gap:12px}
+.cd{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.cd.big{grid-column:1/-1}
+.cd header{display:flex;align-items:baseline;gap:8px}
+.cd header b{font-size:14px;font-weight:650}
+.cd p{margin:0;color:var(--mute);font-size:12.5px;max-width:72ch}
+.strip{background:var(--bar);border-radius:10px;padding:0 8px 12px;display:flex;justify-content:center}
+.strip svg{display:block;width:100%;max-width:420px;height:auto;touch-action:none}
+.cd.big .strip svg{max-width:760px}
+.seg{display:inline-flex;background:var(--card);border:1px solid var(--line);border-radius:10px;padding:2px;gap:2px;margin-bottom:12px}
+.seg button{padding:4px 11px;border-radius:8px;font-size:12.5px;color:var(--mute)}
+.seg button.on{background:var(--card2);color:var(--fg)}
+</style>
+
+<main>
+  <h1>Visor — кольцо и фишки</h1>
+  <p class="lead">Слева от выреза кольцо агента (метка C), справа круглый таймер и другие фишки. Двигайте курсор по странице и наводите на вырез или на кружки: все варианты живые.</p>
+
+  <h2>Кольцо агента: 5 вариантов поведения</h2>
+  <p class="sub">Цвет кольца показывает агента, точка внутри показывает состояние (здесь «готово»). Первый вариант ваш, остальные четыре для сравнения.</p>
+  <div class="grid" id="gRing"></div>
+
+  <h2>Круглый таймер: 5 вариантов</h2>
+  <p class="sub">Тот же Pomodoro на 25 минут, осталось около 18:42. За 5 минут до конца цвет меняется на янтарный.</p>
+  <div class="seg" id="tmSeg"></div>
+  <div class="grid" id="gTimer"></div>
+
+  <h2>Фишка справа: 5 форм для любого нового виджета</h2>
+  <p class="sub">В каждой карточке три примера: таймер, лимит плана 42% и встреча в 16:00. Любая будущая фишка (заряд, порт, сборка) ложится в одну из этих форм.</p>
+  <div class="grid" id="gChip"></div>
+</main>
+
+<script>
+const VW=340,VH=44,CX=48,CY=17,TX=292,TY=17,R=9;
+const COL={work:'#6fb1ff',wait:'#ffb454',done:'#5fd39a'};
+const AG='#d98e6a',ACC='#9aa8ff',TRACK='#25262e',FG='#eceef3',PILL='#15161b';
+const RM=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const clamp=(x,a=0,b=1)=>Math.min(b,Math.max(a,x));
+const wrap=a=>{while(a>Math.PI)a-=2*Math.PI;while(a<-Math.PI)a+=2*Math.PI;return a};
+const ease=t=>1-Math.pow(1-t,3);
+function $(s){return document.querySelector(s)}
+const P={has:false,x:0,y:0};
+addEventListener('pointermove',e=>{P.has=true;P.x=e.clientX;P.y=e.clientY});
+document.documentElement.addEventListener('pointerleave',()=>{P.has=false});
+function spring(o,tgt,dt,k,c){const a=(tgt-o.x)*k-o.v*c;o.v+=a*dt;o.x+=o.v*dt}
+function poly(n,fn){let d='';for(let i=0;i<n;i++){const t=i/n*2*Math.PI,p=fn(t);d+=(i?'L':'M')+p[0].toFixed(2)+' '+p[1].toFixed(2)}return d+'Z'}
+const circ=()=>poly(60,t=>[CX+Math.cos(t)*R,CY+Math.sin(t)*R]);
+let UID=0;
+
+/* общая оболочка: чёрная полоса, вырез, зоны наведения */
+function shell(id,left,right){
+  return `<svg viewBox="0 0 ${VW} ${VH}" role="img" aria-label="Остров: кольцо агента слева, фишка справа">
+  <defs><filter id="goo${id}" x="-70%" y="-70%" width="240%" height="240%"><feGaussianBlur stdDeviation="1.1"/><feColorMatrix values="1 0 0 0 0  0 1 0 0 0  0 0 1 0 0  0 0 0 18 -7"/></filter></defs>
+  <path d="M8 0H332V24a12 12 0 0 1-12 12H20A12 12 0 0 1 8 24Z" fill="#000"/>
+  <path d="M110 0H230V20a8 8 0 0 1-8 8H118a8 8 0 0 1-8-8Z" fill="none" stroke="#24252c" stroke-dasharray="3 3"/>
+  <g class="L">${left}</g><g class="Rg">${right||''}</g>
+  <rect class="hN" x="110" y="0" width="120" height="36" fill="transparent"/>
+  <circle class="hL" cx="${CX}" cy="${CY}" r="17" fill="transparent"/>
+  <circle class="hR" cx="${TX}" cy="${TY}" r="17" fill="transparent"/>
+  </svg>`;
+}
+const leftPlain=()=>`<circle cx="${CX}" cy="${CY}" r="${R}" fill="none" stroke="${AG}" stroke-width="2.4"/><circle cx="${CX}" cy="${CY}" r="3.2" fill="${COL.done}"/>`;
+const leftRing=()=>`<g class="gooG"><path class="ringp" fill="none" stroke="${AG}" stroke-width="2.4"/><circle class="bump" fill="${AG}" r="0" cx="${CX}" cy="${CY}"/></g>
+ <path class="arc" fill="none" stroke="${AG}" stroke-linecap="round" stroke-width="3.6" opacity="0"/>
+ <circle class="rip" fill="none" stroke="${AG}" stroke-width="1.2" r="0" cx="${CX}" cy="${CY}" opacity="0"/>
+ <circle class="sat" fill="${AG}" r="0" cx="${CX}" cy="${CY}"/>
+ <circle class="dotc" fill="${COL.done}" r="3.2" cx="${CX}" cy="${CY}"/>`;
+
+const cards=[];
+function mount(host,title,desc,o){
+  const id=++UID,art=document.createElement('article');
+  art.className='cd'+(o.big?' big':'');
+  art.innerHTML=`<header><b>${title}</b></header><div class="strip">${shell(id,o.left,o.right)}</div><p>${desc}</p>`;
+  host.appendChild(art);
+  const svg=art.querySelector('svg'),c={id,art,svg,vis:true,last:0,hot:false,tick:null};
+  let n=0;
+  (o.hits||['.hN','.hL','.hR']).forEach(s=>{const h=svg.querySelector(s);
+    h.addEventListener('pointerenter',()=>{n++;c.hot=n>0});
+    h.addEventListener('pointerleave',()=>{n=Math.max(0,n-1);c.hot=n>0});});
+  if(o.init)o.init(c);
+  cards.push(c);return c;
+}
+
+/* ---------- кольцо: 5 вариантов ---------- */
+function ringInit(variant){
+  return c=>{
+    const q=s=>c.svg.querySelector(s);
+    const e={ring:q('.ringp'),bump:q('.bump'),arc:q('.arc'),rip:q('.rip'),sat:q('.sat'),dot:q('.dotc')};
+    if(variant==='r1')q('.gooG').setAttribute('filter',`url(#goo${c.id})`);
+    e.ring.setAttribute('d',circ());
+    const S={ang:0,last:false,t0:-1e9,hotAng:0};
+    const upd=({r1:mkR1,r2:mkR2,r3:mkR3,r4:mkR4,r5:mkR5})[variant](e,S);
+    c.tick=(now,dt)=>{
+      let tgt,dist;
+      if(P.has){const r=c.svg.getBoundingClientRect(),k=r.width/VW,dx=P.x-(r.left+CX*k),dy=P.y-(r.top+CY*k);tgt=Math.atan2(dy,dx);dist=Math.hypot(dx,dy)/k}
+      else{tgt=RM?0:now/1700;dist=70}
+      S.ang+=wrap(tgt-S.ang)*clamp(dt*9);
+      if(c.hot!==S.last){S.last=c.hot;S.t0=now;if(c.hot)S.hotAng=S.ang}
+      upd({now,dt,ang:S.ang,dist,hot:c.hot,te:(now-S.t0)/1000});
+    };
+  };
+}
+/* 1. Капля-волна: выступ к курсору, при наведении впитывается, волны идут в обе стороны и встречаются */
+function mkR1(e,S){return ({hot,te,ang})=>{
+  let k=1,bAng=ang,w=-1;
+  if(hot){const p=clamp(te/0.38);k=1-p*p;bAng=S.hotAng;w=(te-0.38)/1.1}
+  else if(te<0.4)k=ease(clamp(te/0.4));
+  const cc=R+0.5*k;
+  e.bump.setAttribute('cx',CX+Math.cos(bAng)*cc);e.bump.setAttribute('cy',CY+Math.sin(bAng)*cc);e.bump.setAttribute('r',4.4*k);
+  let d;
+  if(hot&&w>0&&w<1.35&&!RM){
+    const s=Math.min(w,1)*Math.PI,fade=w>1?Math.max(0,1-(w-1)/0.35):1,A=1.7*fade*(1-0.25*Math.min(w,1));
+    const g=(t,x)=>Math.exp(-Math.pow(wrap(t-x)/0.5,2));
+    d=poly(84,t=>{const r=R+A*(g(t,S.hotAng+s)+g(t,S.hotAng-s));return [CX+Math.cos(t)*r,CY+Math.sin(t)*r]});
+  }else d=circ();
+  e.ring.setAttribute('d',d);
+}}
+/* 2. Глаз: точка смотрит на курсор, при наведении возвращается пружиной и от кольца идёт круг */
+function mkR2(e){const o={x:0,v:0};return ({ang,dist,hot,te,dt})=>{
+  spring(o,hot?0:clamp(dist/45)*3.4,Math.min(dt,0.04),150,9);
+  e.dot.setAttribute('cx',CX+Math.cos(ang)*o.x);e.dot.setAttribute('cy',CY+Math.sin(ang)*o.x);
+  if(hot&&te<0.7&&!RM){const p=te/0.7;e.rip.setAttribute('r',R+ease(p)*9);e.rip.setAttribute('opacity',(1-p)*0.8)}else e.rip.setAttribute('opacity',0);
+}}
+/* 3. Спутник: бусина на орбите, при наведении падает в кольцо, кольцо пульсирует */
+function mkR3(e,S){return ({ang,hot,te})=>{
+  let rr=R+5.5,rad=2.4,bAng=ang,pw=2.4;
+  if(hot){bAng=S.hotAng;const p=clamp(te/0.3);rr=R+5.5*(1-p);rad=p>=1?0:2.4*(1-p*0.6);
+    const q=clamp((te-0.3)/0.7);pw=2.4+2.2*Math.sin(Math.PI*q);
+    if(te>0.3&&te<1&&!RM){e.rip.setAttribute('r',R+ease(q)*9);e.rip.setAttribute('opacity',(1-q)*0.7)}else e.rip.setAttribute('opacity',0);
+  }else{e.rip.setAttribute('opacity',0);if(te<0.4)rr=R+5.5*ease(te/0.4)}
+  e.sat.setAttribute('cx',CX+Math.cos(bAng)*rr);e.sat.setAttribute('cy',CY+Math.sin(bAng)*rr);e.sat.setAttribute('r',rad);
+  e.ring.setAttribute('stroke-width',pw);
+}}
+/* 4. Дуга: часть кольца ярче и толще, при наведении растекается по всему кольцу */
+function mkR4(e){const S={span:1.7};e.ring.setAttribute('stroke-width',1.6);e.ring.setAttribute('stroke-opacity',0.4);e.arc.setAttribute('opacity',1);
+  return ({ang,hot,dt})=>{
+  S.span+=((hot?2*Math.PI:1.7)-S.span)*clamp(dt*9);
+  if(S.span>6.2)e.arc.setAttribute('d',circ());
+  else{const a1=ang-S.span/2,a2=ang+S.span/2;
+    e.arc.setAttribute('d',`M${(CX+Math.cos(a1)*R).toFixed(2)} ${(CY+Math.sin(a1)*R).toFixed(2)}A${R} ${R} 0 ${S.span>Math.PI?1:0} 1 ${(CX+Math.cos(a2)*R).toFixed(2)} ${(CY+Math.sin(a2)*R).toFixed(2)}`)}
+}}
+/* 5. Магнит: кольцо вытягивается к курсору, при наведении собирается с колебанием */
+function mkR5(e){const o={x:0.2,v:0};return ({ang,dist,hot,dt})=>{
+  spring(o,hot?0:clamp(1.15-dist/90,0.1,1),Math.min(dt,0.04),170,7);
+  const s=o.x,a=R*(1+0.3*s),b=R*(1-0.18*s),sh=1.3*s,ca=Math.cos(ang),sa=Math.sin(ang);
+  e.ring.setAttribute('d',poly(60,t=>{const x=a*Math.cos(t),y=b*Math.sin(t);return [CX+sh*ca+x*ca-y*sa,CY+sh*sa+x*sa+y*ca]}));
+  e.dot.setAttribute('cx',CX+sh*ca);e.dot.setAttribute('cy',CY+sh*sa);
+}}
+const RING=[
+ ['1. Капля-волна','Из кольца выступает полукруг и тянется к курсору, как одно тело с кольцом. Наведите на вырез или на кружок: капля впитывается в кольцо, от точки слияния в обе стороны бежит волна и сходится с обратной стороны.','r1',true],
+ ['2. Глаз','Точка состояния внутри кольца смотрит на курсор. При наведении она возвращается в центр с пружинкой, а от кольца расходится круг.','r2'],
+ ['3. Спутник','Отдельная бусина на орбите кольца следует за курсором. При наведении она падает в кольцо, и оно на миг утолщается и пульсирует.','r3'],
+ ['4. Дуга','Часть кольца, обращённая к курсору, ярче и толще остальной. При наведении дуга растекается на всё кольцо.','r4'],
+ ['5. Магнит','Кольцо вытягивается к курсору, как капля. При наведении собирается обратно в круг и пружинисто колеблется.','r5']
+];
+RING.forEach(([t,d,v,big])=>mount($('#gRing'),t,d,{big,left:leftRing(),right:`<g class="R">${timerSVG('t1',0.747,19,ACC,0,0)}</g>`,init:ringInit(v)}));
+
+/* ---------- таймер: 5 вариантов ---------- */
+const TM={mode:'normal'};
+const T0=performance.now();
+function timerLeft(now){
+  const el=(now-T0)/1000;
+  if(TM.mode==='last')return 285-(el%285);
+  let l=1122-el;if(l<0)l+=1500;return l;
+}
+function timerSVG(v,f,min,col,now,id){
+  switch(v){
+   case 't1':{const c=2*Math.PI*10;return `<circle cx="${TX}" cy="${TY}" r="10" fill="none" stroke="${TRACK}" stroke-width="2.4"/><circle cx="${TX}" cy="${TY}" r="10" fill="none" stroke="${col}" stroke-width="2.4" stroke-linecap="round" stroke-dasharray="${(c*f).toFixed(2)} ${c.toFixed(2)}" transform="rotate(-90 ${TX} ${TY})"/><text x="${TX}" y="${TY+2.7}" text-anchor="middle" font-size="7.5" font-family="JetBrains Mono,monospace" fill="${FG}">${min}</text>`}
+   case 't2':{const lvl=TY+9-18*f,ph=now*0.004;let d=`M${TX-12} ${lvl.toFixed(2)}`;
+      for(let x=-12;x<=12;x+=2)d+=`L${TX+x} ${(lvl+1.1*Math.sin(x*0.55+ph)).toFixed(2)}`;
+      d+=`L${TX+12} ${TY+12}L${TX-12} ${TY+12}Z`;
+      return `<clipPath id="wc${id}"><circle cx="${TX}" cy="${TY}" r="9"/></clipPath><g clip-path="url(#wc${id})"><path d="${d}" fill="${col}" opacity=".9"/></g><circle cx="${TX}" cy="${TY}" r="10" fill="none" stroke="${TRACK}" stroke-width="1.6"/>`}
+   case 't3':{let s=`<circle cx="${TX}" cy="${TY}" r="10" fill="none" stroke="${TRACK}" stroke-width="1.6"/>`;
+      for(let i=0;i<12;i++){const a=i*Math.PI/6;s+=`<line x1="${(TX+Math.sin(a)*7.4).toFixed(2)}" y1="${(TY-Math.cos(a)*7.4).toFixed(2)}" x2="${(TX+Math.sin(a)*8.8).toFixed(2)}" y2="${(TY-Math.cos(a)*8.8).toFixed(2)}" stroke="${i%3?'#4a4c58':FG}" stroke-width="1"/>`}
+      const a=(1-f)*2*Math.PI;return s+`<line x1="${TX}" y1="${TY}" x2="${(TX+Math.sin(a)*7).toFixed(2)}" y2="${(TY-Math.cos(a)*7).toFixed(2)}" stroke="${col}" stroke-width="1.6" stroke-linecap="round"/><circle cx="${TX}" cy="${TY}" r="1.5" fill="${col}"/>`}
+   case 't4':{let s='';const lit=f*12;
+      for(let i=0;i<12;i++){const a=i*Math.PI/6,x=TX+Math.sin(a)*8.6,y=TY-Math.cos(a)*8.6;
+        const on=(i>=12-Math.floor(lit))?1:(i===11-Math.floor(lit)?0.45:0);
+        s+=`<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="1.45" fill="${on?col:'#2a2b33'}" opacity="${on||1}"/>`}return s}
+   default:{const a0=(1-f)*2*Math.PI;let sec;
+      if(f>0.999)sec=`<circle cx="${TX}" cy="${TY}" r="8.6" fill="${col}"/>`;
+      else{const p=a=>[TX+Math.sin(a)*8.6,TY-Math.cos(a)*8.6],s=p(a0),e=p(2*Math.PI);
+        sec=`<path d="M${TX} ${TY}L${s[0].toFixed(2)} ${s[1].toFixed(2)}A8.6 8.6 0 ${(2*Math.PI-a0)>Math.PI?1:0} 1 ${e[0].toFixed(2)} ${e[1].toFixed(2)}Z" fill="${col}"/>`}
+      return `<circle cx="${TX}" cy="${TY}" r="10" fill="none" stroke="${TRACK}" stroke-width="1.6"/>${sec}`}
+  }
+}
+const TIMER=[
+ ['1. Кольцо с минутами','Дуга показывает остаток, в центре цифра минут. Читается быстрее всех.','t1'],
+ ['2. Стакан','Круг наполнен «водой», уровень снижается по мере времени, поверхность чуть колышется.','t2'],
+ ['3. Циферблат','Двенадцать делений и стрелка, которая идёт по часовой. Привычный образ часов.','t3'],
+ ['4. Бусины','Двенадцать точек по кругу гаснут одна за другой. Тихий вариант без цифр и линий.','t4'],
+ ['5. Долька','Закрашенный сектор убывает по часовой, как у кухонного таймера.','t5']
+];
+TIMER.forEach(([t,d,v])=>{
+  const c=mount($('#gTimer'),t,d,{left:leftPlain(),right:'<g class="R"></g>'});
+  const g=c.svg.querySelector('.R');c.fast=v==='t2';
+  c.tick=now=>{
+    if(!c.fast&&now-c.last<250)return;c.last=now;
+    const left=timerLeft(now),f=left/1500;
+    g.innerHTML=timerSVG(v,f,Math.ceil(left/60),left<300?COL.wait:ACC,now,c.id);
+  };
+});
+$('#tmSeg').innerHTML='<button class="on" data-m="normal">Осталось 18:42</button><button data-m="last">Последние 5 минут</button>';
+$('#tmSeg').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;TM.mode=b.dataset.m;
+  $('#tmSeg').querySelectorAll('button').forEach(x=>x.classList.toggle('on',x===b))});
+
+/* ---------- фишки справа: 5 форм ---------- */
+const WID=[{lab:'18:42',n:'19',f:0.75,c:ACC},{lab:'42%',n:'42',f:0.42,c:'#6fb1ff'},{lab:'16:00',n:'16',f:1,c:COL.done}];
+function mini(cx,cy,r,w,fill){
+  const c=2*Math.PI*r;
+  return `<circle cx="${cx}" cy="${cy}" r="${r}" fill="${fill||'none'}" stroke="${TRACK}" stroke-width="2"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${w.c}" stroke-width="2" stroke-linecap="round" stroke-dasharray="${(c*w.f).toFixed(2)} ${c.toFixed(2)}" transform="rotate(-90 ${cx} ${cy})"/><text x="${cx}" y="${cy+2.3}" text-anchor="middle" font-size="6.4" font-family="JetBrains Mono,monospace" fill="${FG}">${w.n}</text>`;
+}
+const CHIPS=[
+ ['1. Ряд кружков','Каждая фишка это мини-кольцо с числом. До трёх помещаются рядом, лишние уходят в ленту при клике.',c=>{c.svg.querySelector('.R').innerHTML=WID.map((w,i)=>mini(250+i*25,TY,8,w)).join('')}],
+ ['2. Кружок и текст','Главная фишка показана кольцом и цифрами, остальные свёрнуты в значок «+2».',c=>{const w=WID[0];
+   c.svg.querySelector('.R').innerHTML=mini(250,TY,9,w)+`<text x="266" y="${TY+3.6}" font-size="10.5" font-family="JetBrains Mono,monospace" fill="${FG}">${w.lab}</text><rect x="304" y="${TY-7}" width="20" height="14" rx="7" fill="${PILL}" stroke="${TRACK}"/><text x="314" y="${TY+3}" text-anchor="middle" font-size="8" font-family="JetBrains Mono,monospace" fill="#8a8e9b">+2</text>`}],
+ ['3. Таблетка','Цветная точка и подпись в капсуле. Подходит для фишек, где важнее слово, чем доля: «42% · 5 ч», «встреча 16:00».',c=>{
+   c.svg.querySelector('.R').innerHTML=`<rect x="238" y="${TY-10}" width="88" height="20" rx="10" fill="${PILL}" stroke="${TRACK}"/><circle cx="250" cy="${TY}" r="3" fill="#6fb1ff"/><text x="258" y="${TY+3.3}" font-size="9.5" font-family="JetBrains Mono,monospace" fill="${FG}">42% · 5 ч</text>`}],
+ ['4. Стопка','Кружки лежат внахлёст и занимают мало места. При наведении на правую часть расходятся и читаются по отдельности.',c=>{
+   const g=c.svg.querySelector('.R'),o={x:0,v:0};
+   c.tick=(now,dt)=>{spring(o,c.hot?1:0,Math.min(dt,0.04),160,12);
+     g.innerHTML=WID.map((w,i)=>mini(252+i*(9+13*o.x),TY,8.5,w,'#000')).join('')}}],
+ ['5. Ротация','Одно место на все фишки: они сменяют друг друга каждые 3 секунды, точки справа показывают номер. Наведение ставит смену на паузу.',c=>{
+   const g=c.svg.querySelector('.R');let t0=performance.now(),pausedAt=0;
+   c.tick=now=>{
+     if(c.hot){if(!pausedAt)pausedAt=now;return}
+     if(pausedAt){t0+=now-pausedAt;pausedAt=0}
+     const el=now-t0,idx=Math.floor(el/3000)%3,ph=(el%3000)/3000,off=(1-ease(clamp(ph/0.12)))*7,op=clamp(ph/0.12),w=WID[idx];
+     g.innerHTML=`<g transform="translate(0 ${off.toFixed(2)})" opacity="${op.toFixed(2)}">${mini(254,TY,9,w)}<text x="270" y="${TY+3.6}" font-size="10.5" font-family="JetBrains Mono,monospace" fill="${FG}">${w.lab}</text></g>`+
+       [0,1,2].map(i=>`<circle cx="322" cy="${TY-6+i*6}" r="1.6" fill="${i===idx?FG:'#3a3b45'}"/>`).join('')}}]
+];
+CHIPS.forEach(([t,d,fn])=>{
+  const c=mount($('#gChip'),t,d,{left:leftPlain(),right:'<g class="R"></g>',hits:['.hR']});
+  fn(c);
+});
+
+/* ---------- цикл анимации ---------- */
+const io=new IntersectionObserver(es=>es.forEach(e=>{const c=cards.find(x=>x.art===e.target);if(c)c.vis=e.isIntersecting}));
+cards.forEach(c=>io.observe(c.art));
+let last=performance.now();
+function loop(now){
+  const dt=Math.min(0.05,(now-last)/1000);last=now;
+  for(const c of cards)if(c.vis&&c.tick)c.tick(now,dt);
+  requestAnimationFrame(loop);
+}
+requestAnimationFrame(loop);
+</script>
