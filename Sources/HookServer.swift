@@ -5,7 +5,11 @@ import Foundation
 enum VisorPaths {
     static let supportDir: URL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
         .appendingPathComponent("Visor", isDirectory: true)
-    static let socketPath = supportDir.appendingPathComponent("visor.sock").path
+    /// Сокет, через который хуки агентов передают события. Самопроверка (`--snapshot`) работает на своём сокете:
+    /// иначе она удаляла бы сокет запущенного Visor, и события агентов (и звук «готово») молча пропадали.
+    static let socketPath = CommandLine.arguments.contains("--snapshot")
+        ? "/tmp/visor-selftest-\(getpid()).sock"
+        : supportDir.appendingPathComponent("visor.sock").path
     static let relayURL = supportDir.appendingPathComponent("bin/visor-hook")
     static let soundsDir = supportDir.appendingPathComponent("Sounds", isDirectory: true)
     static let shelfDir = supportDir.appendingPathComponent("Shelf", isDirectory: true)
@@ -20,7 +24,7 @@ enum HookRelay {
     static let script = """
     #!/bin/sh
     # Visor: ретранслятор хуков. Аргументы: агент (claude или codex) и сколько секунд ждать ответа.
-    SOCK="$HOME/Library/Application Support/Visor/visor.sock"
+    SOCK="${VISOR_SOCK:-$HOME/Library/Application Support/Visor/visor.sock}"
     [ -S "$SOCK" ] || exit 0
     { printf '{"visor_agent":"%s"}\\n' "${1:-claude}"; cat | tr -d '\\r\\n'; printf '\\n'; } | /usr/bin/nc -U -w "${2:-3}" "$SOCK" 2>/dev/null
     exit 0
@@ -31,7 +35,7 @@ enum HookRelay {
     #!/bin/sh
     # Visor: строка состояния Claude Code. Всегда выходит с кодом 0.
     IN=$(cat)
-    SOCK="$HOME/Library/Application Support/Visor/visor.sock"
+    SOCK="${VISOR_SOCK:-$HOME/Library/Application Support/Visor/visor.sock}"
     if [ -S "$SOCK" ]; then
       { printf '{"visor_agent":"claude-status"}\\n'; printf '%s' "$IN" | tr -d '\\r\\n'; printf '\\n'; } | /usr/bin/nc -U -w 2 "$SOCK" >/dev/null 2>&1
     fi
@@ -135,6 +139,12 @@ final class HookServer: @unchecked Sendable {
         source?.cancel()
         source = nil
         unlink(VisorPaths.socketPath)
+    }
+
+    /// Сокет на месте. Если файл кто-то удалил, сервер слушает «в пустоту»: хуки его не находят.
+    var isReachable: Bool {
+        var info = stat()
+        return source != nil && lstat(VisorPaths.socketPath, &info) == 0 && (info.st_mode & S_IFMT) == S_IFSOCK
     }
 
     private func acceptAll(on listener: Int32, handler: @escaping @Sendable (HookRequest) -> Void) {

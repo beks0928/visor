@@ -1069,6 +1069,9 @@ enum Snapshot {
                && Feedback.issueURL(repository: "me/visor", kind: .feature, version: "", macos: "")?.absoluteString == "https://github.com/me/visor/issues/new?template=feature.yml"
                && Feedback.normalized("OWNER/visor") == nil && Feedback.normalized("me/visor") == "me/visor"
                && Feedback.normalized("bad repo") == nil && Feedback.normalized(nil) == nil)
+        expect("самопроверка не трогает сокет запущенного Visor",
+               VisorPaths.socketPath.hasPrefix("/tmp/visor-selftest-") && !VisorPaths.socketPath.contains("Application Support")
+               && HookRelay.script.contains("${VISOR_SOCK:-$HOME/Library/Application Support/Visor/visor.sock}"))
         expect("автозапуск: включается один раз и только из «Программ»",
                LaunchAtLogin.shouldEnableOnFirstRun(offered: false, inApplications: true, enabled: false)
                && !LaunchAtLogin.shouldEnableOnFirstRun(offered: true, inApplications: true, enabled: false)
@@ -1593,6 +1596,7 @@ enum Snapshot {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/sh")
             process.arguments = [VisorPaths.relayURL.path, agent, String(wait)]
+            process.environment = ProcessInfo.processInfo.environment.merging(["VISOR_SOCK": VisorPaths.socketPath]) { $1 }
             let input = Pipe(), output = Pipe()
             process.standardInput = input
             process.standardOutput = output
@@ -1635,6 +1639,7 @@ enum Snapshot {
             let process = Process()
             process.executableURL = URL(fileURLWithPath: "/bin/sh")
             process.arguments = [VisorPaths.statusRelayURL.path]
+            process.environment = ProcessInfo.processInfo.environment.merging(["VISOR_SOCK": VisorPaths.socketPath]) { $1 }
             let input = Pipe(), output = Pipe()
             process.standardInput = input
             process.standardOutput = output

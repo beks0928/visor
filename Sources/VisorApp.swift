@@ -17,6 +17,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var statusItem: NSStatusItem?
     private var toggleItem: NSMenuItem?
     private var hookServer: HookServer?
+    private var hookWatchdog: Timer?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         if let flag = CommandLine.arguments.firstIndex(of: "--snapshot"), flag + 1 < CommandLine.arguments.count {
@@ -56,6 +57,20 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func startAgents() {
         HookRelay.install()
         AgentCenter.shared.start()
+        startHookServer()
+        // Если сокет пропал (его удалила другая копия Visor или очистка), сервер поднимается заново:
+        // без него события агентов и звук «готово» молча не доходят.
+        hookWatchdog = Timer.scheduledTimer(withTimeInterval: 15, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                guard let self, self.hookServer?.isReachable != true else { return }
+                NSLog("Visor: сокет хуков пропал, запускаю сервер заново")
+                self.hookServer?.stop()
+                self.startHookServer()
+            }
+        }
+    }
+
+    private func startHookServer() {
         let server = HookServer()
         do {
             try server.start { request in
@@ -63,6 +78,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             }
             hookServer = server
         } catch {
+            hookServer = nil
             NSLog("Visor: сервер хуков не запустился: \(error)")
         }
     }
